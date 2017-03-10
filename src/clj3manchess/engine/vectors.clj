@@ -59,6 +59,8 @@
 
 (defn addVec [vec ^Pos from] (cond
                               (contains? vec :centerOneCloser) (cond
+                                                                 (not (and (contains? vec :inward) (contains? vec :plusFile)))
+                                                                 (throw (IllegalArgumentException.))
                                                                  (and
                                                                   (or
                                                                    (and (:centerOneCloser vec) (>= (.rank from) 4))
