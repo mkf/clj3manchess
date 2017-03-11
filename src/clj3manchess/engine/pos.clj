@@ -2,6 +2,8 @@
   (use [clj3manchess.engine.color] :reload-all))
 
 (defrecord Pos [rank file])
+(defn rank [^Pos pos] (.rank pos))
+(defn file [^Pos pos] (.file pos))
 (defn posColorSegm [^Pos pos] (get colors (quot (.file pos) 8)))
 (defn posOnSegm [color rank fileOnSegm]
   (Pos. rank (+
