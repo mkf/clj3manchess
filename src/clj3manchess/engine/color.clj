@@ -1,4 +1,4 @@
-(ns archiet.clj3manchess.engine.color)
+(ns clj3manchess.engine.color)
 
 (def colors [:white :gray :black])
 

@@ -1,11 +1,9 @@
-(ns archiet.clj3manchess.engine.pos)
+(ns clj3manchess.engine.pos
+  (use [clj3manchess.engine.color] :reload-all))
 
-(import archiet.clj3manchess.engine.color)
-
-(defrecord Pos [^int rank ^int file]
-  (colorSegm [this] (get colors (/ file 8)))
-
-(defn posOnSegm [color ^int rank ^int fileOnSegm]
+(defrecord Pos [rank file])
+(defn posColorSegm [^Pos pos] (get colors (quot (.file pos) 8)))
+(defn posOnSegm [color rank fileOnSegm]
   (Pos. rank (+
               fileOnSegm
               (bit-shift-left (colorSegm color) 3))))
