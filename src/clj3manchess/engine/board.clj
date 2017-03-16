@@ -1,7 +1,15 @@
 (ns clj3manchess.engine.board
-  (:require [clojure.spec :as s]))
+  (:require [clojure.spec :as s]
+            [clj3manchess.engine.vectors :as vec]))
 
 (s/def ::figtype #{:pawn :rook :knight :bishop :queen :king})
+
+(def tvec {:pawn ::vec/pawnvec
+           :rook ::vec/axisvec
+           :knight ::vec/knightvec
+           :bishop ::vec/diagvec
+           :queen ::vec/contvec
+           :king ::vec/kingvec})
 
 (s/def ::piece
   (s/keys :req-un [::figtype ::color]))

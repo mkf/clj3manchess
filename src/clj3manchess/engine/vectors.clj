@@ -19,7 +19,7 @@
 ;; (defprotocol PawnVector Vector
 ;;              (reqpc [this])
 ;;              (reqProm [this]))
-;; (defprotocol ContinuousVector)
+;; (defprotocol ContVector)
 
 ;(s/def ::zerovec #{:zerovec})
 (s/def ::abs (s/and integer? pos?))
@@ -32,9 +32,9 @@
 (s/def ::rankvec (s/keys :req-un [::inward (not ::plusFile) (not ::centeronecloser)] :opt-un [::abs]))
 (s/def ::diagvec (s/keys :req-un [::plusFile ::inward (not ::centeronecloser)] :opt-un [::abs]))
 (s/def ::axisvec (s/or ::filevec ::rankvec))
-(s/def ::continuousvec (s/and (s/or ::axisvec ::diagvec) ::pawnpromvec))
-(s/def ::multipliedvec (s/and (s/keys :req-un [::abs])) ::continuousvec)
-(s/def ::kingvec (s/and ::continuousvec (not ::multipliedvec)))
+(s/def ::contvec (s/and (s/or ::axisvec ::diagvec) ::pawnpromvec))
+(s/def ::multipliedvec (s/and (s/keys :req-un [::abs])) ::contvec)
+(s/def ::kingvec (s/and ::contvec (not ::multipliedvec)))
 (s/def ::pawnvec (s/or (s/and (s/or ::diagvec ::rankvec) (not ::multipliedvec) (s/keys :opt-un [::prom])) ::pawnlongjumpvec))
 (s/def ::pawnpromvec (s/and ::pawnvec (s/keys :req-un [::prom])))
 (s/def ::prom integer?)
@@ -182,7 +182,7 @@
                                                 2 {:castling :queenside}
                                                 6 {:castling :kingside}
                                                 :default nil)))
-            ::continuousvec (fn [from to] (set/union ((::axisvec vecft) from to)
+            ::contvec (fn [from to] (set/union ((::axisvec vecft) from to)
                                                      ((::diagvec vecft) from to)))
             ::pawnwalkvec (fn [from to] (first (filter #(= to (addvec % from)) (tfmapset :inward))))
             ::pawnlongjumpvec (fn [from to] (cond (and (= (rank from) 1) (= (rank to) 3) (= (file from) (file to))) :pawnlongjump))
