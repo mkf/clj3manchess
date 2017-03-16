@@ -82,7 +82,7 @@
                                                                                               :plusFile (not (:plusFile vec)))))
                                                             :else (repeat (:abs vec) (dissoc vec :abs)))))
                                         :else (throw (IllegalArgumentException.))) ;; maybe return vec?
-                                      :else vec))
+                                      :else vec)))
 
 (defn addvec [vec from] (cond
                                (contains? vec :centeronecloser) (cond
@@ -170,6 +170,10 @@
                                (or (and (:plusFile vec) (= (mod (file from) 8) 7))
                                    (and (not (:plusFile vec)) (= mod (file from) 8) 0))))
 
+(defn wrappedfilevec [t f wlong] (let [diff (- t f)
+                                       sgnf (if (< diff 0) - +)]
+                                   (if (= wlong (< 12 (sgnf diff))) diff (- diff (sgnf 24)))))
+
 (def vecft {
             ::axisvec (fn [from to] (set/union (set/select (complement nil?) #{((::rankvec vecft) from to)})
                                                ((:filevec vecft) from to)))
@@ -193,5 +197,28 @@
                                                                          abs (if inward t (- t))]
                                                                      (cond (= 1 abs) {:inward inward}
                                                                            (not (= 0 abs)) {:inward inward :abs abs}))))
-            ::filevec (fn [from to] (filter (complement nil?) (sort-by :abs )))
+            ::filevec (fn [from to] (filter (complement nil?) (sort-by :abs (let [diff (- (file to) (file from))
+                                                                                  plusfile (< 0 diff)
+                                                                                  absdiff (if plusfile diff (- diff))]
+                                                                              (cond (not (= 0 absdiff))
+                                                                                    '({:plusFile plusfile :abs absdiff}
+                                                                                      {:plusFile (not plusfile) :abs (- 24 absdiff)}))))))
+            ::knightvec (fn [from to] (first (filter #(= to (addvec % from))
+                                                     (set/join (tfmapset :inward) (tfmapset :plusFile) (tfmapset :centeronecloser)))))
+            ::kingcontvec (fn [from to] (first (filter #(= to (addvec % from))
+                                                   (set/union (tfmapset :inward) (tfmapset :plusFile)
+                                                              (set/join (tfmapset :inward) (tfmapset :plusFile))))))
+            ::kingvec (fn [from to] (first (filter (complement nil?) '((::castlingvec vecft) (::kingcontvec vecft)))))
+            ::diagvec (fn [from to] (let [filediff (wrappedfilevec (file from) (file to))
+                                          plusfile (> filediff 0)
+                                          absfilediff (if plusfile filediff (- filediff))
+                                          inwardshort (> (rank to) (rank from))
+                                          absrankdiff (if inwardshort (- (rank to) (rank from)) (- (rank from) (rank to)))
+                                          ser (cond (and (not (= 0 absrankdiff)) (= absfilediff absrankdiff))
+                                                    {:abs absfilediff :inward inwardshort :plusFile plusfile})
+                                          ranksum (+ (rank to) (rank from))
+                                          ler (cond (and (not (= 0 absfilediff)) (= absfilediff ranksum))
+                                                    {:abs (- (+ 5 5 1) ranksum) ;; (5-s)+1+(5-r)
+                                                     :inward true :plusFile (not plusfile)})]
+                                      (filter (complement nil?) '(ser ler))))
                 })
