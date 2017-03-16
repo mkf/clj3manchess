@@ -1,5 +1,7 @@
-(ns clj3manchess.engine.color)
+(ns clj3manchess.engine.color
+  (:require [clojure.spec :as s]))
 
+(s/def ::color #{:white :gray :black})
 (def colors [:white :gray :black])
 
 (defn colorSegm [color] (case
