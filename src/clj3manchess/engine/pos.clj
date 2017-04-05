@@ -1,5 +1,5 @@
 (ns clj3manchess.engine.pos
-  (use [clj3manchess.engine.color] :reload-all))
+  (:use [clj3manchess.engine.color]))
 
 (defrecord Pos [rank file])
 (defn rank [^Pos pos] (.rank pos))

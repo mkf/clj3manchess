@@ -1,5 +1,6 @@
 (ns clj3manchess.engine.vectors
-  (:use [clj3manchess.engine.pos] :reload-all
+  (:use [clj3manchess.engine.pos])
+  (:require
         [clojure.spec :as s]
         [clojure.set :as set])
   (:import [clj3manchess.engine.pos Pos]))
@@ -33,7 +34,7 @@
 (s/def ::diagvec (s/keys :req-un [::plusfile ::inward (not ::centeronecloser)] :opt-un [::abs]))
 (s/def ::axisvec (s/or ::filevec ::rankvec))
 (s/def ::contvec (s/and (s/or ::axisvec ::diagvec) ::pawnpromvec))
-(s/def ::multipliedvec (s/and (s/keys :req-un [::abs])) ::contvec)
+(s/def ::multipliedvec (s/and (s/keys :req-un [::abs]) ::contvec))
 (s/def ::kingvec (s/and ::contvec (not ::multipliedvec)))
 (s/def ::pawnvec (s/or (s/and (s/or ::diagvec ::rankvec) (not ::multipliedvec) (s/keys :opt-un [::prom])) ::pawnlongjumpvec))
 (s/def ::pawnpromvec (s/and ::pawnvec (s/keys :req-un [::prom])))
