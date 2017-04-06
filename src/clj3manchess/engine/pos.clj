@@ -1,5 +1,6 @@
 (ns clj3manchess.engine.pos
-  (:use [clj3manchess.engine.color]
+  (:use [clj3manchess.engine.color])
+  (:require
        [clojure.spec :as s]))
 
 ;(defrecord Pos [rank file])
