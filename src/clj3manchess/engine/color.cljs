@@ -4,22 +4,33 @@
 (s/def ::color #{:white :gray :black})
 (def colors [:white :gray :black])
 
-(defn colorSegm [color] (case
+(defn segm [color] (case
                              :white 0
                              :gray 1
                              :black 2))
+(s/fdef segm
+        :args (s/cat :color ::color)
+        :ret #{0 1 2})
 
-(defn colorIndex [color] (+ 1 (colorSegm color)))
+(defn idx [color] (inc (segm color)))
+(s/fdef idx
+        :args (s/cat :color ::color)
+        :ret #{1 2 3})
 
-(defn nextColor [color] (case
+(defn next [color] (case
                             :white :gray
                             :gray :black
                             :black :white))
+(s/fdef next
+        :args (s/cat :color ::color)
+        :ret ::color)
 
-(defn prevColor [color] (case
+(defn prev [color] (case
                             :white :black
                             :gray :white
                             :black :gray))
-
+(s/fdef prev
+        :args (s/cat :color ::color)
+        :ret ::color)
 
 

@@ -1,6 +1,6 @@
 (ns clj3manchess.engine.pos
-  (:use [clj3manchess.engine.color])
   (:require
+       [clj3manchess.engine.color :as col]
        [clojure.spec :as s]))
 
 ;(defrecord Pos [rank file])
@@ -19,43 +19,42 @@
         :args (s/cat :pos ::pos)
         :ret ::file)
 
-(defn posColorSegm [pos] {:pre [(s/valid? ::pos pos)]} (colors (quot (file pos) 8)))
-(s/fdef posColorSegm
+(defn color-segm [pos] {:pre [(s/valid? ::pos pos)]} (colors (quot (file pos) 8)))
+(s/fdef color-segm
         :args (s/cat :pos ::pos)
         :ret ::color)
 
-(defn posOnSegm [color rank file-on-segm] {:pre [(s/valid? ::color color) (s/valid? ::rank rank) (s/valid? ::file-on-segm file-on-segm)]}
+(defn pos-on-segm [color rank file-on-segm] {:pre [(s/valid? ::color color) (s/valid? ::rank rank) (s/valid? ::file-on-segm file-on-segm)]}
   [rank (+ fileOnSegm
-           (bit-shift-left (colorSegm color) 3))])
-(s/fdef posOnSegm
+           (bit-shift-left (col/segm color) 3))])
+(s/fdef pos-on-segm
         :args (s/cat :color ::color :rank ::rank :file-on-segm ::file-on-segm)
         :ret ::pos)
 
-(defn sameRank [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (rank a) (rank b)))
-(s/fdef sameRank
+(defn same-rank [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (rank a) (rank b)))
+(s/fdef same-rank
         :args (s/cat :a ::pos :b ::pos)
         :ret boolean?)
 
-(defn sameFile [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (file a) (file b)))
-(s/fdef sameFile
+(defn same-file [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (file a) (file b)))
+(s/fdef same-file
         :args (s/cat :a ::pos :b ::pos)
         :ret boolean?)
 
-(defn fileDist [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)] :post [(s/valid? ::file %)]}
+(defn file-dist [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)] :post [(s/valid? ::file %)]}
   (let [fileMinus (mod (- (file a) (file b)) 24)]
->>>>>>> dd12f1518f47f755ec220adbd0df074abb4d3d3b
                                  (cond (> fileMinus 12) (- 24 fileMinus) :else fileMinus)))
-(s/fdef fileDist
+(s/fdef file-dist
         :args (s/cat :a ::pos :b ::pos)
-        :ret ::file
+        :ret ::file)
 
-(defn adjacentFile [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (fileDist a b) 12))
-(s/fdef adjacentFile
+(defn opposite-file [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (file-dist a b) 12))
+(s/fdef opposite-file
         :args (s/cat :a ::pos :b ::pos)
         :ret boolean?)
 
-(defn sameOrAdjacentFile [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (mod (fileDist a b) 12) 0))
-(s/fdef sameOrAdjacentFile
+(defn same-or-opposite-file [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (mod (file-dist a b) 12) 0))
+(s/fdef same-or-opposite-file
         :args (s/cat :a ::pos :b ::pos)
         :ret boolean?)
 

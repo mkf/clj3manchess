@@ -1,9 +1,7 @@
 (ns clj3manchess.engine.vectors
-(:use [clj3manchess.engine.pos]
-      [clj3manchess.engine.board])
-  (:require
-        [clojure.spec :as s]
-        [clojure.set :as set]))
+  (:require [clojure.spec :as s] [clojure.set :as set]
+            [clj3manchess.engine.pos :as p :refer [rank file color-segm pos-on-segm same-file same-rank
+                                                   file-dist same-or-opposite-file opposite-file]]))
 
 (defn one-if-nil-else-input [input] (if (nil? input) 1 input))
 

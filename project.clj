@@ -8,11 +8,18 @@
   :source-paths ["src"]
   :test-paths ["test"]
   :cljsbuild
-  {:builds
-   {:test {:source-paths ["src" "test"]
+  {:builds {
+   :dev {:source-paths ["src"]
+          :id "main"
+         :jar true
+         :compiler {:output-to "target/main.js"
+                    :output-dir "target"
+                    :optimizations :none
+                    :pretty-print true}}
+   :test {:source-paths ["src" "test"]
            :incremental true
-           :compiler {:output-to "target/main.js"
-                      :output-dir "target"
+           :compiler {:output-to "target/main-test.js"
+                      :output-dir "target-test"
                       :optimizations :none
                       :pretty-print true}}}})
 
