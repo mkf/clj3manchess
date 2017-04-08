@@ -4,9 +4,9 @@
        [clojure.spec :as s]))
 
 ;(defrecord Pos [rank file])
-(s/def ::rank (s/and integer? (comp neg?) #(<= % 5)))
-(s/def ::file (s/and integer? (comp neg?) #(<= % 23)))
-(s/def ::file-on-segm (s/and integer? (comp neg?) #(<= % 7)))
+(s/def ::rank (s/and integer? (complement neg?) #(<= % 5)))
+(s/def ::file (s/and integer? (complement neg?) #(<= % 23)))
+(s/def ::file-on-segm (s/and integer? (complement neg?) #(<= % 7)))
 (s/def ::pos (s/tuple ::rank ::file))
 
 (defn rank [pos] {:pre [(s/valid? ::pos pos)]} (first pos))
@@ -22,13 +22,13 @@
 (defn color-segm [pos] {:pre [(s/valid? ::pos pos)]} (col/colors (quot (file pos) 8)))
 (s/fdef color-segm
         :args (s/cat :pos ::pos)
-        :ret ::color)
+        :ret ::col/color)
 
-(defn pos-on-segm [color rank file-on-segm] {:pre [(s/valid? ::color color) (s/valid? ::rank rank) (s/valid? ::file-on-segm file-on-segm)]}
+(defn pos-on-segm [color rank file-on-segm] {:pre [(s/valid? ::col/color color) (s/valid? ::rank rank) (s/valid? ::file-on-segm file-on-segm)]}
   [rank (+ file-on-segm
            (bit-shift-left (col/segm color) 3))])
 (s/fdef pos-on-segm
-        :args (s/cat :color ::color :rank ::rank :file-on-segm ::file-on-segm)
+        :args (s/cat :color ::col/color :rank ::rank :file-on-segm ::file-on-segm)
         :ret ::pos)
 
 (defn same-rank [a b] {:pre [(s/valid? ::pos a) (s/valid? ::pos b)]} (= (rank a) (rank b)))
