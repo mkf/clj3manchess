@@ -62,9 +62,19 @@
 (def castling-file-diff {:queenside -2 :kingside 2})
 (def castling-empties {:queenside '(3,2,1) :kingside '(5,6)})
 
-(s/defn type-of-cont-vec :- (s/enum :rankvec :filevec :diagvec) ([vec :- ContVecNoProm] (cond (s/check RankVec vec) :rankvec
-                                                                             (s/check FileVec vec) :filevec
-                                                                             (s/check DiagVec vec) :diagvec)) ([vec :- ContVecNoProm, _] (type-of-cont-vec vec)))
+(s/defn is-diagvec? :- s/Bool [vec :- Vec] (every? true? (map #(contains? vec %) [:inward :plusfile])))
+(s/defn is-knights? :- s/Bool [vec :- Vec] (contains? vec :centeronecloser))
+(s/defn is-rankvec? :- s/Bool [vec :- Vec] (and (contains? vec :inward) (not (contains? vec :plusfile))))
+(s/defn is-filevec? :- s/Bool [vec :- Vec] (and (contains? vec :plusfile) (not (contains? vec :inward))))
+(s/defn is-axisvec? :- s/Bool [vec :- Vec] (not= (contains? vec :plusfile) (contains? vec :inward)))
+(s/defn is-contvec? :- s/Bool [vec :- Vec] (or (contains? vec :plusfile) (contains? vec :inward)))
+(s/defn is-castvec? :- s/Bool [vec :- Vec] (contains? vec :castling))
+(s/defn is-pawnlongjumpvec? :- s/Bool [vec :- Vec] (= vec :pawnlongjumpvec))
+
+(s/defn type-of-cont-vec :- (s/enum :rankvec :filevec :diagvec)
+  ([vec :- ContVecNoProm] (cond (is-rankvec? vec) :rankvec
+                                (is-filevec? vec) :filevec
+                                (is-diagvec? vec) :diagvec)) ([vec :- ContVecNoProm, _] (type-of-cont-vec vec)))
 
 (s/defn thru-center-cont-vec? :- s/Bool
   ([inward :- s/Bool, abs :- FileAbs, from-rank :- Rank]
@@ -204,15 +214,6 @@
   (let [abs (abs vec)]
     [(rank from) (mod ((cond (:plusfile vec) + :else -)
                        (file from) abs) 24)]))
-
-(s/defn is-diagvec? :- s/Bool [vec :- Vec] (every? true? (map #(contains? vec %) [:inward :plusfile])))
-(s/defn is-knights? :- s/Bool [vec :- Vec] (contains? vec :centeronecloser))
-(s/defn is-rankvec? :- s/Bool [vec :- Vec] (and (contains? vec :inward) (not (contains? vec :plusfile))))
-(s/defn is-filevec? :- s/Bool [vec :- Vec] (and (contains? vec :plusfile) (not (contains? vec :inward))))
-(s/defn is-axisvec? :- s/Bool [vec :- Vec] (not= (contains? vec :plusfile) (contains? vec :inward)))
-(s/defn is-contvec? :- s/Bool [vec :- Vec] (or (contains? vec :plusfile) (contains? vec :inward)))
-(s/defn is-castvec? :- s/Bool [vec :- Vec] (contains? vec :castling))
-(s/defn is-pawnlongjumpvec? :- s/Bool [vec :- Vec] (= vec :pawnlongjumpvec))
 
 ;addvec returns nil in place of VectorAdditionFailedException
 ;;but how to represent it with schema?

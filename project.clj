@@ -5,7 +5,8 @@
                  [org.clojure/clojurescript "1.9.494"]
                  [prismatic/schema "1.1.5"]]
   :plugins [[lein-cljsbuild "1.1.5"]
-            [lein-figwheel "0.5.9"]]
+            [lein-figwheel "0.5.9"]
+            [lein-doo "0.1.7"]]
   :source-paths ["src"]
   :test-paths ["test"]
   :cljsbuild
@@ -21,6 +22,6 @@
            :incremental true
            :compiler {:output-to "target/main-test.js"
                       :output-dir "target-test"
-                      :optimizations :none
+                      :optimizations :whitespace
                       :pretty-print true}}}})
 
