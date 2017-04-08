@@ -1,7 +1,8 @@
 (ns clj3manchess.engine.vectors
   (:require [schema.core :as s] [clojure.set :as set]
             [clj3manchess.engine.pos :as p :refer [rank file color-segm pos-on-segm same-file same-rank
-                                                   file-dist same-or-opposite-file opposite-file Pos Rank File]]))
+                                                   file-dist same-or-opposite-file opposite-file Pos Rank File]]
+            [clj3manchess.engine.castling :as cas :refer [CastlingType]]))
 
 (defn one-if-nil-else-input [input] (if (nil? input) 1 input))
 
@@ -44,8 +45,7 @@
                   (s/required-key :plusfile) s/Bool})
 (def KingAxisVec (s/either KingRankVec KingFileVec))
 (def KingContVec (s/either KingAxisVec KingDiagVec))
-(def Castling (s/enum :queenside :kingside))
-(def CastlingVec {(s/required-key :castling) Castling})
+(def CastlingVec {(s/required-key :castling) CastlingType})
 ;(def KingVec (s/both ContVecNoProm {(s/optional-key :inward) s/Bool
 ;                                    (s/optional-key :plusfile) s/Bool}))
 (def KingVec (s/either CastlingVec KingContVec))
