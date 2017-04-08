@@ -6,7 +6,10 @@
                  [prismatic/schema "1.1.5"]]
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.9"]
-            [lein-doo "0.1.7"]]
+            [lein-doo "0.1.7"]
+            [lein-bikeshed "0.2.0"]
+            [lein-cljfmt "0.5.6"]
+            [lein-kibit "0.1.3"]]
   :source-paths ["src"]
   :test-paths ["test"]
   :cljsbuild
