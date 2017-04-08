@@ -29,7 +29,7 @@
 
 (s/defn opposite-file :- s/Bool [a :- Pos, b :- Pos] (= (file-dist a b) 12))
 
-(s/defn same-or-opposite-file :- s/Bool [a :- Pos, b :- Pos] (= (mod (file-dist a b) 12) 0))
+(s/defn same-or-opposite-file :- s/Bool [a :- Pos, b :- Pos] (zero? (mod (file-dist a b) 12)))
 
 ;; (defn canIDiagonal [^Pos from ^Pos to] (cond
 ;;                                      (= from to) {:short false :long false}

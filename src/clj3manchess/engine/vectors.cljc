@@ -105,7 +105,7 @@
 (s/defn units-diag-vec :- [(s/one KingDiagVec "first required") KingDiagVec]
   ([vec :- DiagVec, from-rank :- Rank] (units-diag-vec (:inward vec) (:plusfile vec) (:abs vec) from-rank))
   ([inward :- s/Bool, plusfile :- s/Bool, abs :- RankAbs, from-rank :- Rank] (let [abs (one-if-nil-else-input abs)]
-                                    (if (not inward) (repeat abs {:inward inward :plusfile plusfile})
+                                    (if-not inward (repeat abs {:inward inward :plusfile plusfile})
                                         (if (thru-center-cont-vec? inward abs from-rank)
                                           (concat
                                            (repeat (ranks-inward-to-pass-center from-rank)
@@ -159,7 +159,7 @@
                                                                    (mod (+ from-file (* (?2:1 (not= centeronecloser inward))
                                                                                         (sgnb plusfile))) 24)])))
 
-(s/defn add-castling-vec :- Pos [vec :- CastlingVec, from :- Pos] (when (and (= (rank from) 0) (= (mod (file from) 8) kfm))
+(s/defn add-castling-vec :- Pos [vec :- CastlingVec, from :- Pos] (when (and (zero? (rank from)) (= (mod (file from) 8) kfm))
                                                                     [0 (+ (file from) (castling-file-diff (:castling vec)))]))
 
 (s/defn add-pawnlongjumpvec :- Pos ([from :- Pos] (when (= (rank from) 1) [3 (file from)]))
@@ -188,7 +188,7 @@
                                                                                                                       (cond (:plusfile vec)
                                                                                                                             -10 :else 10))
                                                                                                                      24)]
-                                                                                       (cond (= further 0) [5 solely-thru-center-file]
+                                                                                       (cond (zero? further) [5 solely-thru-center-file]
                                                                                              :else [rank-after
                                                                                                          (mod ((cond (not (:plusfile vec))
                                                                                                                      + :else -)
