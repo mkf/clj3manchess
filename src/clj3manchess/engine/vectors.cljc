@@ -1,7 +1,7 @@
 (ns clj3manchess.engine.vectors
   (:require [schema.core :as s] [clojure.set :as set]
             [clj3manchess.engine.pos :as p :refer [rank file color-segm pos-on-segm same-file same-rank
-                                                   file-dist same-or-opposite-file opposite-file Pos Rank File]]
+                                                   file-dist same-or-opposite-file opposite-file Pos Rank File kfm]]
             [clj3manchess.engine.fig :refer [FigType]]
             [clj3manchess.engine.castling :as cas :refer [CastlingType]]))
 
@@ -59,7 +59,6 @@
 
 (s/defn sgn :- (s/enum -1 1) [n :- s/Num] (if (neg? n) -1 1))
 
-(def kfm 4)
 (def castling-file-diff {:queenside -2 :kingside 2})
 (def castling-empties {:queenside '(3,2,1) :kingside '(5,6)})
 

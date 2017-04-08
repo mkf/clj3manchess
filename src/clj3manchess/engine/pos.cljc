@@ -12,6 +12,8 @@
 (s/defn rank :- Rank [pos :- Pos] (first pos))
 (s/defn file :- File [pos :- Pos] (last pos))
 
+(def kfm 4)
+
 (s/defn color-segm :- col/Color [pos :- Pos] (col/colors (quot (file pos) 8)))
 
 (s/defn pos-on-segm :- Pos [color :- col/Color, rank :- Rank, file-on-segm :- FileOnSegm] 

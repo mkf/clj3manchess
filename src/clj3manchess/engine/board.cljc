@@ -5,3 +5,5 @@
 
 ;(s/def ::arrayboardrank (s/coll-of ::fig :kind vector? :count 24 :distinct false))
 ;(s/def ::arrayboard (s/coll-of ::arrayboardrank :kind vector? :count 6 :distinct false))
+
+(def Square (s/maybe Fig))
