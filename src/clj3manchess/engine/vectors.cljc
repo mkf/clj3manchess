@@ -93,7 +93,7 @@
                        (repeat (one-if-nil-else-input abs) {:plusfile plusfile}))))
 
 (s/defn units-diag-vec :- [(s/one KingDiagVec "first required") KingDiagVec]
-  ([vec :- DiagVec, from-rank :- Rank] (units-diag-vec (:inward vec) (:plusfile vec) (:abs vec)))
+  ([vec :- DiagVec, from-rank :- Rank] (units-diag-vec (:inward vec) (:plusfile vec) (:abs vec) from-rank))
   ([inward :- s/Bool, plusfile :- s/Bool, abs :- RankAbs, from-rank :- Rank] (let [abs (one-if-nil-else-input abs)]
                                     (if (not inward) (repeat abs {:inward inward :plusfile plusfile})
                                         (if (thru-center-cont-vec? inward abs from-rank)
@@ -208,7 +208,7 @@
 (s/defn is-diagvec? :- s/Bool [vec :- Vec] (every? true? (map #(contains? vec %) [:inward :plusfile])))
 (s/defn is-knights? :- s/Bool [vec :- Vec] (contains? vec :centeronecloser))
 (s/defn is-rankvec? :- s/Bool [vec :- Vec] (and (contains? vec :inward) (not (contains? vec :plusfile))))
-(s/defn is-filevec? :- s/Bool [vec :- Vec] (and (contains? vec :plusfile (not (contains? vec :inward)))))
+(s/defn is-filevec? :- s/Bool [vec :- Vec] (and (contains? vec :plusfile) (not (contains? vec :inward))))
 (s/defn is-axisvec? :- s/Bool [vec :- Vec] (not= (contains? vec :plusfile) (contains? vec :inward)))
 (s/defn is-contvec? :- s/Bool [vec :- Vec] (or (contains? vec :plusfile) (contains? vec :inward)))
 (s/defn is-castvec? :- s/Bool [vec :- Vec] (contains? vec :castling))
@@ -230,12 +230,12 @@
                                (or (and (:plusfile vec) (= (mod (file from) 8) 7))
                                    (and (not (:plusfile vec)) (= mod (file from) 8) 0))))
 
-(s/defn wrappedfilevec :- FileAbs [t :- File, f :- File, wlong :- s/Bool]
+(s/defn wrappedfilevec :- FileAbs ([t :- File, f :- File, wlong :- s/Bool]
   (let [diff (- t f)
         sgnf (if (neg? diff) - +)]
     (if (= wlong (< 12 (sgnf diff)))
       diff
-      (- diff (sgnf 24)))))
+      (- diff (sgnf 24))))) ([t :- File, f :- File] (wrappedfilevec t f false)))
 
 (def vecft {
             ::axisvec (fn [from to] (set/union (set/select (complement nil?) #{((::rankvec vecft) from to)})
