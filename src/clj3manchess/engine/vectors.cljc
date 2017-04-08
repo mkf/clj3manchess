@@ -2,6 +2,7 @@
   (:require [schema.core :as s] [clojure.set :as set]
             [clj3manchess.engine.pos :as p :refer [rank file color-segm pos-on-segm same-file same-rank
                                                    file-dist same-or-opposite-file opposite-file Pos Rank File]]
+            [clj3manchess.engine.fig :refer [FigType]]
             [clj3manchess.engine.castling :as cas :refer [CastlingType]]))
 
 (defn one-if-nil-else-input [input] (if (nil? input) 1 input))
@@ -286,3 +287,10 @@
                                                      :inward true :plusfile (not plusfile)})]
                                       (filter (complement nil?) '(ser ler))))
                 })
+
+(def tvec {:pawn ::pawnvec
+           :rook ::axisvec
+           :knight ::knightvec
+           :bishop ::diagvec
+           :queen ::contvec
+           :king ::kingvec})
