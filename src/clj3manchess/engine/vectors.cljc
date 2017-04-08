@@ -1,43 +1,50 @@
 (ns clj3manchess.engine.vectors
-  (:require [clojure.spec :as s] [clojure.set :as set]
+  (:require [schema.core :as s] [clojure.set :as set]
             [clj3manchess.engine.pos :as p :refer [rank file color-segm pos-on-segm same-file same-rank
                                                    file-dist same-or-opposite-file opposite-file]]))
 
 (defn one-if-nil-else-input [input] (if (nil? input) 1 input))
 
-(defn abs [vec] {:pre [(s/valid? ::contvec vec)] :post [(s/valid? integer? %)]} (one-if-nil-else-input (:abs vec)))
-
-(s/def ::abs (s/and integer? pos? #(< % 24)))
-(s/def ::inward boolean?)
-(s/def ::plusfile boolean?)
-(s/def ::centeronecloser boolean?)
-(s/def ::pawnlongjumpvec #{:pawnlongjumpvec})
-(s/def ::knightvec (s/and (s/keys :req-un [::plusfile ::inward ::centeronecloser]) #(not (contains? % :abs))))
-(s/def ::filevec (s/and (s/keys :req-un [::plusfile] :opt-un [::abs])
-                        #(not (let [arg %] (or (contains? arg :inward) (contains? arg :centeronecloser))))))
-(s/def ::rankvec (s/and (s/keys :req-un [::inward] :opt-un [::abs])
-                        #(not (let [arg %] (or (contains? arg :plusfile) (contains? arg :centeronecloser))))
-                        #(<= (abs %) 11)))
-(s/def ::diagvec (s/and (s/keys :req-un [::plusfile ::inward] :opt-un [::abs])
-                        #(not (contains? % :centeronecloser))
-                        #(<= (abs %) 11)))
-(s/def ::axisvec (s/or :filevec ::filevec :rankvec ::rankvec))
-(s/def ::contvec (s/and (s/or :axisvec ::axisvec :diagvec ::diagvec) ::pawnpromvec))
-(s/fdef abs
-        :args (s/cat :vec ::contvec)
-        :ret ::abs)
-
-(s/def ::multiplicablevec (s/and ::contvec #(not (contains? % :prom))))
-(s/def ::multipliedvec (s/and ::multiplicablevec (s/keys :req-un [::abs]) #(> (:abs %) 1)))
-(s/def ::kingvec (s/and ::contvec #(not (contains? % :abs))))
-(s/def ::pawnvec (s/or :pawncontvec (s/and (s/or ::diagvec ::rankvec)
-                              #(not (contains? % :abs))
-                              (s/keys :opt-un [::prom]))
-                       :pawnlongjumpvec ::pawnlongjumpvec))
-(s/def ::pawnpromvec (s/and ::pawnvec (s/keys :req-un [::prom])))
-(s/def ::prom integer?)
-(s/def ::castling #{:queenside :kingside})
-(s/def ::castlingvec (s/keys :req-un [::castling]))
+(def FileAbs (apply s/enum (range 1 24)))
+(def Abs FileAbs)
+(def RankAbs (apply s/enum (range 1 11)))
+;(s/def ::inward boolean?)
+;(s/def ::plusfile boolean?)
+;(s/def ::centeronecloser boolean?)
+(def PawnLongJumpVec (s/eq :pawnlongjumpvec))
+(def KnightVec {(s/required-key :plusfile) s/Bool
+                (s/required-key :inward) s/Bool
+                (s/required-key :centeronecloser) s/Bool})
+(def FileVec {(s/required-key :plusfile) s/Bool
+              (s/optional-key :abs) FileAbs})
+(def RankVec {(s/required-key :inward) s/Bool
+              (s/optional-key :abs) RankAbs})
+(def DiagVec {(s/required-key :plusfile) s/Bool
+              (s/required-key :inward) s/Bool
+              (s/optional-key :abs) RankAbs})
+(def AxisVec (s/either FileVec RankVec))
+(def Prom (s/enum :queen :rook :bishop :knight))
+(def PawnWalkVec {(s/required-key :inward) s/Bool
+                  (s/optional-key :prom) Prom})
+(def PawnCapVec {(s/required-key :inward) s/Bool
+                 (s/required-key :plusfile) s/Bool
+                 (s/optional-key :prom) Prom})
+(def PawnContVec (s/either PawnWalkVec PawnCapVec))
+(def PawnPromVec (s/both PawnContVec {(s/required-key :prom) Prom}))
+(def ContVecNoProm (s/either AxisVec DiagVec))
+(def ContVec (s/either CommonContVec PawnContVec))
+(s/defn abs :- Abs [vec :- ContVec] (one-if-nil-else-input (:abs vec)))
+;(s/def ::multipliedvec (s/and ::multiplicablevec (s/keys :req-un [::abs]) #(> (:abs %) 1)))
+;(s/def ::kingvec (s/and ::contvec #(not (contains? % :abs))))
+(def KingVec (s/both ContVecNoProm {(s/optional-key :inward) s/Bool
+                                    (s/optional-key :plusfile) s/Bool}))
+;; (s/def ::pawnvec (s/or :pawncontvec (s/and (s/or ::diagvec ::rankvec)
+;;                               #(not (contains? % :abs))
+;;                               (s/keys :opt-un [::prom]))
+;;                        :pawnlongjumpvec ::pawnlongjumpvec))
+(def PawnVec (s/either PawnContVec PawnLongJumpVec))
+(def Castling (s/enum :queenside :kingside))
+(def CastlingVec {(s/required-key :castling) Castling})
 
 (defn sgn [n] {:pre [(s/valid? number? n)]} (cond (< n 0) -1 :else 1))
 (s/fdef sgn
