@@ -19,13 +19,13 @@
         :args (s/cat :pos ::pos)
         :ret ::file)
 
-(defn color-segm [pos] {:pre [(s/valid? ::pos pos)]} (colors (quot (file pos) 8)))
+(defn color-segm [pos] {:pre [(s/valid? ::pos pos)]} (col/colors (quot (file pos) 8)))
 (s/fdef color-segm
         :args (s/cat :pos ::pos)
         :ret ::color)
 
 (defn pos-on-segm [color rank file-on-segm] {:pre [(s/valid? ::color color) (s/valid? ::rank rank) (s/valid? ::file-on-segm file-on-segm)]}
-  [rank (+ fileOnSegm
+  [rank (+ file-on-segm
            (bit-shift-left (col/segm color) 3))])
 (s/fdef pos-on-segm
         :args (s/cat :color ::color :rank ::rank :file-on-segm ::file-on-segm)

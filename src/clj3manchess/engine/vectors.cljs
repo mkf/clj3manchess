@@ -30,10 +30,10 @@
 (s/def ::multiplicablevec (s/and ::contvec #(not (contains? % :prom))))
 (s/def ::multipliedvec (s/and ::multiplicablevec (s/keys :req-un [::abs]) #(> (:abs %) 1)))
 (s/def ::kingvec (s/and ::contvec #(not (contains? % :abs))))
-(s/def ::pawnvec (s/or (s/and (s/or ::diagvec ::rankvec)
+(s/def ::pawnvec (s/or :pawncontvec (s/and (s/or ::diagvec ::rankvec)
                               #(not (contains? % :abs))
                               (s/keys :opt-un [::prom]))
-                       ::pawnlongjumpvec))
+                       :pawnlongjumpvec ::pawnlongjumpvec))
 (s/def ::pawnpromvec (s/and ::pawnvec (s/keys :req-un [::prom])))
 (s/def ::prom integer?)
 (s/def ::castling #{:queenside :kingside})
@@ -48,14 +48,18 @@
 (def castlingFileDiff {:queenside -2 :kingside 2})
 (def castlingEmpties {:queenside '(3,2,1) :kingside '(5,6)})
 
+(defn type-of-axis-vec ([vec] (cond (s/valid? ::rankvec vec) ::rankvec
+                                   (s/valid? ::filevec vec) ::filevec
+                                   (s/valid? ::diagvec vec) ::diagvec))
+  ([vec _] (type-of-axis-vec vec)))
 
 (defn thru-center-cont-vec?
-  [inward abs from-rank] {:pre [(s/valid? boolean? inward) (s/valid? ::abs abs) (s/valid? ::rank from-rank)]}
+  ([inward abs from-rank] {:pre [(s/valid? boolean? inward) (s/valid? ::abs abs) (s/valid? ::rank from-rank)]}
   (and (not (nil? inward))
        (let [abs (one-if-nil-else-input abs)]
-         (and inward (> (+ abs from-rank) 5))))
-  [vec from-rank] {:pre [(s/valid? ::contvec vec) (s/valid? ::rank from-rank)]}
-  (thru-center-rank-vec? (:inward vec) (:abs vec) from-rank))
+         (and inward (> (+ abs from-rank) 5)))))
+  ([vec from-rank] {:pre [(s/valid? ::contvec vec) (s/valid? ::rank from-rank)]}
+  (thru-center-cont-vec? (:inward vec) (:abs vec) from-rank)))
 (s/fdef thru-center-cont-vec?
         :args (s/cat :vecparam (s/alt :inwardabs (s/cat :inward boolean? :abs ::abs)
                                       :vec ::contvec)
@@ -71,13 +75,13 @@
 (def one-outward {:inward false})
 
 (defn units-rank-vec
-  [vec from-rank] {:pre [(s/valid? ::rankvec vec) (s/valid? ::rank from-rank)]} (units-rank-vec (:inward vec) (:abs vec) from-rank)
-  [inward abs from-rank] {:pre [(s/valid? boolean? inward) (s/valid? ::abs abs) (s/valid? ::rank from-rank)]}
+  ( [vec from-rank] {:pre [(s/valid? ::rankvec vec) (s/valid? ::rank from-rank)]} (units-rank-vec (:inward vec) (:abs vec) from-rank) )
+  ( [inward abs from-rank] {:pre [(s/valid? boolean? inward) (s/valid? ::abs abs) (s/valid? ::rank from-rank)]}
   (let [abs (one-if-nil-else-input abs)]
                            (if (thru-center-cont-vec? inward abs from-rank)
                            (concat (repeat (ranks-inward-to-pass-center from-rank) one-inward)
                                    (repeat (- abs (ranks-inward-to-pass-center from-rank)) one-outward))
-                           (repeat abs {:inward inward}))))
+                           (repeat abs {:inward inward}))) ))
 (s/fdef units-rank-vec
         :args (s/cat :vecparam (s/alt :inwardabs (s/cat :inward boolean? :abs ::abs)
                                       :vec ::rankvec)
@@ -85,17 +89,17 @@
         :ret (s/coll-of (s/and ::rankvec ::kingvec) :min-count 1))
 
 (defn units-file-vec
-  [vec] {:pre [(s/valid? ::filevec vec)]} (units-file-vec (:abs vec) (:plusfile vec))
-  [abs plusfile] {:pre [(s/valid? ::abs abs) (s/valid? boolean? plusfile)]} (cond (not (nil? plusfile))
-                       (repeat (one-if-nil-else-input abs) {:plusfile plusfile})))
+  ([vec] {:pre [(s/valid? ::filevec vec)]} (units-file-vec (:abs vec) (:plusfile vec)))
+  ([abs plusfile] {:pre [(s/valid? ::abs abs) (s/valid? boolean? plusfile)]} (cond (not (nil? plusfile))
+                       (repeat (one-if-nil-else-input abs) {:plusfile plusfile}))))
 (s/fdef units-file-vec
         :args (s/alt :plusfileabs (s/cat :plusfile boolean? :abs ::abs)
                      :vec ::filevec)
         :ret (s/coll-of (s/and ::rankvec ::kingvec) :min-count 1))
 
 (defn units-diag-vec
-  [vec from-rank] (units-diag-vec (:inward vec) (:plusfile vec) (:abs vec))
-  [inward plusfile abs from-rank] (let [abs (one-if-nil-else-input abs)]
+  ([vec from-rank] (units-diag-vec (:inward vec) (:plusfile vec) (:abs vec)))
+  ([inward plusfile abs from-rank] (let [abs (one-if-nil-else-input abs)]
                                     (if (not inward) (repeat abs {:inward inward :plusfile plusfile})
                                         (if (thru-center-cont-vec? inward abs from-rank)
                                           (concat
@@ -103,16 +107,26 @@
                                                    {:inward inward :plusfile plusfile})
                                            (repeat (- abs (ranks-inward-to-pass-center from-rank))
                                                    {:inward false :plusfile (not plusfile)}))
-                                          (repeat abs {:inward inward :plusfile plusfile})))))
+                                          (repeat abs {:inward inward :plusfile plusfile}))))))
 
 
-(defn units [vec from-rank] (cond (contains? vec :abs)
-                                      (cond
-                                        (= (into set (keys vec)) #{:plusfile :inward :abs}) (units-diag-vec vec from-rank)
-                                        (= (into set (keys vec)) #{:plusfile :abs}) (units-file-vec vec)
-                                        (= (into set (keys vec)) #{:inward :abs}) (units-rank-vec vec from-rank)
-                                        :else (throw (IllegalArgumentException.))) ;; maybe return vec?
-                                      :else '(vec))))
+;; (defn units [vec from-rank] (cond (contains? vec :abs)
+;;                                       (cond
+;;                                         (s/valid? ::diagvec vec) (units-diag-vec vec from-rank)
+;;                                         (s/valid? ::filevec vec) (units-file-vec vec)
+;;                                         (s/valid? ::rankvec vec) #{:inward :abs}) (units-rank-vec vec from-rank)
+;;                                         :else (throw (IllegalArgumentException.))) ;; maybe return vec?
+;;                                       :else '(vec))
+
+(defmulti units type-of-axis-vec)
+
+(defmethod units ::diagvec ([vec] (fn [from-rank] (units-diag-vec vec from-rank)))
+  ([vec from-rank] (units-diag-vec vec from-rank)))
+
+(defmethod units ::filevec ([vec] (units-file-vec vec)) ([vec _] (units-file-vec vec)))
+
+(defmethod units ::rankvec ([vec] (fn [from-rank] (units-rank-vec vec from-rank)))
+  ([vec from-rank] (units-rank-vec vec from-rank)))
 
 (defn addvec [vec from] (cond
                                (contains? vec :centeronecloser) (cond
@@ -196,7 +210,7 @@
 
 (defn tfmapset [keyword] #{{keyword true} {keyword false}})
 
-(defn creek (from vec) (and (< (rank from) 3)
+(defn creek [from vec] (and (< (rank from) 3)
                                (or (and (:plusfile vec) (= (mod (file from) 8) 7))
                                    (and (not (:plusfile vec)) (= mod (file from) 8) 0))))
 
