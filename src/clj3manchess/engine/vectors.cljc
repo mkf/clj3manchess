@@ -217,7 +217,7 @@
 
 ;addvec returns nil in place of VectorAdditionFailedException
 ;;but how to represent it with schema?
-(s/defn addvec :- Pos [vec :- Vec, from :- Pos] (cond
+(s/defn addvec :- (s/maybe Pos) [vec :- Vec, from :- Pos] (cond
                                (is-knights? vec) (add-knight-vec vec from)
                                (is-castvec? vec) (add-castling-vec vec from)
                                (is-pawnlongjumpvec? vec) (add-pawnlongjumpvec from)
