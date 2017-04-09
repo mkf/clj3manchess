@@ -2,7 +2,8 @@
   (:require [schema.core :as s]
             [clj3manchess.engine.fig :as f :refer [FigType Fig]]
             [clj3manchess.engine.vectors :as vec]
-            [clj3manchess.engine.pos :as p :refer [Pos rank file]]))
+            [clj3manchess.engine.pos :as p :refer [Pos rank file]]
+            [clojure.string :as stri]))
 
 ;(s/def ::arrayboardrank (s/coll-of ::fig :kind vector? :count 24 :distinct false))
 ;(s/def ::arrayboard (s/coll-of ::arrayboardrank :kind vector? :count 6 :distinct false))
@@ -68,3 +69,18 @@
        (map (fn [x] [x (getb b x)]))
        (apply concat)
        (apply hash-map)))
+
+;; (s/defn fill-array-board :- ArrayBoard [b :- Board]
+;;   (->> (range 6)
+;;        (map (fn [ra] (->> (range 24)
+;;                           (map #(getb b [ra %]))
+;;                           (into []))) )
+;;        ;;(into [])
+;;        (map f/figstr)
+;;        (into [])))
+
+(s/defn fill-array-board :- ArrayBoard [b :- Board]
+  (map (fn [ra] (map #(getb b [ra %]) (range 24)) ) (range 6)))
+
+(s/defn string-of-rank [r] (str "[" (stri/join " " (map f/figstr r)) "]"))
+(s/defn string-of-arrayboard [b] (str "[" (stri/join " \n " (map string-of-rank (reverse b))) "]"))
