@@ -4,7 +4,7 @@
                :cljs [cljs.test :as t :include-macros true])))
 
 (t/deftest newgame-map []
-  (println (b/fill-map-board ::b/newgame))
+  (println (b/string-of-arrayboard (b/fill-array-board (b/fill-map-board ::b/newgame) ) ))
   (println "\n")
   (println (b/getb ::b/newgame [0 0]))
   (println "\n")
