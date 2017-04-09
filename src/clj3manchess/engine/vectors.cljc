@@ -57,6 +57,11 @@
 (def PawnVec (s/either PawnContVec PawnLongJumpVec))
 (def Vec (s/either PawnLongJumpVec KnightVec ContVec KingVec))
 
+(def BoundVec {(s/required-key :from) Pos
+               (s/required-key :vec) Vec})
+
+(s/defn bv-to :- Pos [bv :- BoundVec] (addvec (:vec bv) (:from bv)))
+
 (s/defn sgn :- (s/enum -1 1) [n :- s/Num] (if (neg? n) -1 1))
 
 (def castling-file-diff {:queenside -2 :kingside 2})

@@ -14,17 +14,17 @@
   :test-paths ["test"]
   :cljsbuild
   {:builds {
-   :dev {:source-paths ["src"]
-          :id "main"
-         :jar true
-         :compiler {:output-to "target/main.js"
-                    :output-dir "target"
-                    :optimizations :none
-                    :pretty-print true}}
-   :test {:source-paths ["src" "test"]
-           :incremental true
-           :compiler {:output-to "target/main-test.js"
-                      :output-dir "target-test"
-                      :optimizations :whitespace
-                      :pretty-print true}}}})
+            :dev  {:source-paths ["src"]
+                   :id           "main"
+                   :jar          true
+                   :compiler     {:output-to     "target/main.js"
+                                  :output-dir    "target"
+                                  :optimizations :none
+                                  :pretty-print  true}}
+            :test {:source-paths ["src" "test"]
+                   :incremental  true
+                   :compiler     {:output-to     "target/main-test.js"
+                                  :output-dir    "target-test"
+                                  :optimizations :whitespace
+                                  :pretty-print  true}}}})
 
