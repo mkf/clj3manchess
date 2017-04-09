@@ -31,7 +31,7 @@
 
 (s/defn get-from-newgame-board :- Square ([b :- NewGameBoard, pos :- Pos] (get-from-newgame-board pos))
   ([pos :- Pos] (case (rank pos)
-                  0 {:type (get newgame-zero-rank-segm (mod (file pos) 8))
+                  0 {:type  (get newgame-zero-rank-segm (mod (file pos) 8))
                      :color (p/color-segm pos)}
                   1 {:type :pawn :color (p/color-segm pos) :crossedCenter false}
                   nil)))
@@ -80,7 +80,7 @@
 ;;        (into [])))
 
 (s/defn fill-array-board :- ArrayBoard [b :- Board]
-  (map (fn [ra] (map #(getb b [ra %]) (range 24)) ) (range 6)))
+  (map (fn [ra] (map #(getb b [ra %]) (range 24))) (range 6)))
 
 (s/defn string-of-rank :- s/Str [r :- [Square]] (str "[" (stri/join " " (map f/figstr r)) "]"))
 (s/defn string-of-arrayboard :- s/Str [b :- ArrayBoard] (str "[" (stri/join " \n " (map string-of-rank (reverse b))) "]"))

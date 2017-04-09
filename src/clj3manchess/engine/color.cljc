@@ -12,11 +12,11 @@
 (s/defn idx :- ColorIdx [color :- Color] (inc (segm color)))
 
 (s/defn next-col :- Color [color :- Color] (case
-                            :white :gray
-                            :gray :black
-                            :black :white))
+                                             :white :gray
+                                                    :gray :black
+                                                    :black :white))
 
 (s/defn prev-col :- Color [color :- Color] (case
-                            :white :black
-                            :gray :white
-                            :black :gray))
+                                             :white :black
+                                                    :gray :white
+                                                    :black :gray))
