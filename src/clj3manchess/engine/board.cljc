@@ -29,7 +29,8 @@
 
 (def newgame-zero-rank-segm [:rook :knight :bishop :queen :king :bishop :knight :rook])
 
-(s/defn get-from-newgame-board :- Square ([b :- NewGameBoard, pos :- Pos] (get-from-newgame-board pos))
+(s/defn get-from-newgame-board :- Square
+  ([b :- NewGameBoard, pos :- Pos] (get-from-newgame-board pos))
   ([pos :- Pos] (case (rank pos)
                   0 {:type  (get newgame-zero-rank-segm (mod (file pos) 8))
                      :color (p/color-segm pos)}
@@ -55,14 +56,19 @@
 (s/defn put-onto-array-board :- ArrayBoard [b :- ArrayBoard, pos :- Pos, what :- Square]
   (let [b (if (>= (count b) (rank pos)) b (into b (repeat (- (rank pos) (count b)) [])))
         the-rank (get b (rank pos))
-        b (if (>= (count the-rank) (file pos)) b (assoc b (rank pos) (into the-rank (repeat (- (file pos) (count the-rank)) []))))]
+        b (if (>= (count the-rank) (file pos))
+            b (assoc b (rank pos)
+                       (into the-rank
+                             (repeat (- (file pos) (count the-rank))
+                                     []))))]
     (assoc-in b pos what)))
 
 (s/defn put-onto-map-board :- MapBoard [b :- MapBoard, pos :- Pos, what :- Square]
   (if (nil? what) (dissoc b pos) (assoc b pos what)))
 
 (s/defn put-onto-diff-board :- DiffBoard [b :- DiffBoard, pos :- Pos, what :- Square]
-  (if (= (getb (first b) pos) what) [(first b) (dissoc (second b) pos)] [(first b) (assoc (second b) pos what)]))
+  (if (= (getb (first b) pos) what) [(first b) (dissoc (second b) pos)]
+                                    [(first b) (assoc (second b) pos what)]))
 
 (s/defn fill-map-board :- MapBoard [b :- Board]
   (->> p/all-pos
@@ -82,5 +88,7 @@
 (s/defn fill-array-board :- ArrayBoard [b :- Board]
   (map (fn [ra] (map #(getb b [ra %]) (range 24))) (range 6)))
 
-(s/defn string-of-rank :- s/Str [r :- [Square]] (str "[" (stri/join " " (map f/figstr r)) "]"))
-(s/defn string-of-arrayboard :- s/Str [b :- ArrayBoard] (str "[" (stri/join " \n " (map string-of-rank (reverse b))) "]"))
+(s/defn string-of-rank :- s/Str
+  [r :- [Square]] (str "[" (stri/join " " (map f/figstr r)) "]"))
+(s/defn string-of-arrayboard :- s/Str
+  [b :- ArrayBoard] (str "[" (stri/join " \n " (map string-of-rank (reverse b))) "]"))

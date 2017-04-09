@@ -36,6 +36,8 @@
 
 (defn figcoltypestr [fig] ((color-of-fig fig) (fig-by-type-rune fig)))
 
-(s/defn figstr :- s/Str [fig :- (s/maybe Fig)] (if (nil? fig) "__"
-                                                              (str (figcoltypestr fig)
-                                                                   (crossed-center-str fig))))
+(s/defn figstr :- s/Str
+  [fig :- (s/maybe Fig)]
+  (if (nil? fig) "__"
+                 (str (figcoltypestr fig)
+                      (crossed-center-str fig))))
