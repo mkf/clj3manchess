@@ -37,3 +37,10 @@
 ;;                                                    (eqModToFile [^int what] (equalsToFile (mod what 24)))]
 ;;                                              (cond
 ;;                                                (equalsToFile ))
+
+(def all-pos
+  (->> (range 6)
+       (map (fn [rank] (->> (range 24)
+                            (map (fn [file] [rank,file])))))
+       (apply concat)))
+

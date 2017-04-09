@@ -7,12 +7,12 @@
 (def FigType (apply s/enum figtypeset))
 (def FigTypeNotPawn (apply s/enum figtypeset-sanspawn))
 
-(def Piece {(s/required-key :figtype) FigType
+(def Piece {(s/required-key :type) FigType
             (s/required-key :color) Color})
 
-(def FigNotPawn {(s/required-key :figtype) FigTypeNotPawn
+(def FigNotPawn {(s/required-key :type) FigTypeNotPawn
                  (s/required-key :color) Color})
-(def Pawn {(s/required-key :figtype) (s/enum :pawn)
+(def Pawn {(s/required-key :type) (s/enum :pawn)
            (s/required-key :color) Color
            (s/required-key :crossedCenter) s/Bool})
 (def Fig (s/either FigNotPawn Pawn))
