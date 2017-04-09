@@ -82,5 +82,5 @@
 (s/defn fill-array-board :- ArrayBoard [b :- Board]
   (map (fn [ra] (map #(getb b [ra %]) (range 24)) ) (range 6)))
 
-(s/defn string-of-rank [r] (str "[" (stri/join " " (map f/figstr r)) "]"))
-(s/defn string-of-arrayboard [b] (str "[" (stri/join " \n " (map string-of-rank (reverse b))) "]"))
+(s/defn string-of-rank :- s/Str [r :- [Square]] (str "[" (stri/join " " (map f/figstr r)) "]"))
+(s/defn string-of-arrayboard :- s/Str [b :- ArrayBoard] (str "[" (stri/join " \n " (map string-of-rank (reverse b))) "]"))
