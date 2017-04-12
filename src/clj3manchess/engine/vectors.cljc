@@ -88,11 +88,11 @@
 
 (s/defn thru-center-cont-vec? :- s/Bool
   ([inward :- s/Bool, abs :- FileAbs, from-rank :- Rank]
-    (and (not (nil? inward))
-         (let [abs (one-if-nil-else-input abs)]
-           (and inward (> (+ abs from-rank) 5)))))
+   (and (not (nil? inward))
+        (let [abs (one-if-nil-else-input abs)]
+          (and inward (> (+ abs from-rank) 5)))))
   ([vec :- ContVec, from-rank :- Rank]
-    (thru-center-cont-vec? (:inward vec) (:abs vec) from-rank)))
+   (thru-center-cont-vec? (:inward vec) (:abs vec) from-rank)))
 
 (s/defn ranks-inward-to-pass-center :- (s/enum 1 2 3 4 5 6)
   [from-rank :- Rank] (inc (- 5 from-rank)))
@@ -103,11 +103,11 @@
 (s/defn units-rank-vec :- [(s/one KingRankVec "first required") KingRankVec]
   ([vec :- RankVec, from-rank :- Rank] (units-rank-vec (:inward vec) (:abs vec) from-rank))
   ([inward :- s/Bool, abs :- RankAbs, from-rank :- Rank]
-    (let [abs (one-if-nil-else-input abs)]
-      (if (thru-center-cont-vec? inward abs from-rank)
-        (concat (repeat (ranks-inward-to-pass-center from-rank) one-inward)
-                (repeat (- abs (ranks-inward-to-pass-center from-rank)) one-outward))
-        (repeat abs {:inward inward})))))
+   (let [abs (one-if-nil-else-input abs)]
+     (if (thru-center-cont-vec? inward abs from-rank)
+       (concat (repeat (ranks-inward-to-pass-center from-rank) one-inward)
+               (repeat (- abs (ranks-inward-to-pass-center from-rank)) one-outward))
+       (repeat abs {:inward inward})))))
 
 (s/defn units-file-vec :- [(s/one KingFileVec "first required") KingFileVec]
   ([vec :- FileVec] (units-file-vec (:abs vec) (:plusfile vec)))
@@ -119,15 +119,15 @@
   ([vec :- DiagVec, from-rank :- Rank] (units-diag-vec (:inward vec) (:plusfile vec)
                                                        (:abs vec) from-rank))
   ([inward :- s/Bool, plusfile :- s/Bool, abs :- RankAbs, from-rank :- Rank]
-    (let [abs (one-if-nil-else-input abs)]
-      (if-not inward (repeat abs {:inward inward :plusfile plusfile})
-                     (if (thru-center-cont-vec? inward abs from-rank)
-                       (concat
-                         (repeat (ranks-inward-to-pass-center from-rank)
-                                 {:inward inward :plusfile plusfile})
-                         (repeat (- abs (ranks-inward-to-pass-center from-rank))
-                                 {:inward false :plusfile (not plusfile)}))
-                       (repeat abs {:inward inward :plusfile plusfile}))))))
+   (let [abs (one-if-nil-else-input abs)]
+     (if-not inward (repeat abs {:inward inward :plusfile plusfile})
+                    (if (thru-center-cont-vec? inward abs from-rank)
+                      (concat
+                        (repeat (ranks-inward-to-pass-center from-rank)
+                                {:inward inward :plusfile plusfile})
+                        (repeat (- abs (ranks-inward-to-pass-center from-rank))
+                                {:inward false :plusfile (not plusfile)}))
+                      (repeat abs {:inward inward :plusfile plusfile}))))))
 
 
 ;; (defn units [vec from-rank] (cond (contains? vec :abs)
@@ -157,10 +157,10 @@
 
 (s/defn thru-center-knight-vec? :- s/Bool
   ([vec :- KnightVec, from-rank :- Rank]
-    (thru-center-knight-vec? (:inward vec) (:centeronecloser vec) from-rank))
+   (thru-center-knight-vec? (:inward vec) (:centeronecloser vec) from-rank))
   ([inward :- s/Bool, centeronecloser :- s/Bool, from-rank :- Rank]
-    (and inward (or (and centeronecloser (>= from-rank 4))
-                    (= from-rank 5)))))
+   (and inward (or (and centeronecloser (>= from-rank 4))
+                   (= from-rank 5)))))
 
 (s/defn add-knight-vec :- Pos [vec :- KnightVec, from :- Pos]
   (let [{:keys [inward plusfile centeronecloser]} vec
@@ -186,38 +186,38 @@
 
 (s/defn add-diag-outward :- Pos
   ([plusfile :- s/Bool, abs :- RankAbs, from :- Pos]
-    (add-diag-outward plusfile abs (rank from) (file from)))
+   (add-diag-outward plusfile abs (rank from) (file from)))
   ([plusfile :- s/Bool, abs :- RankAbs, rank-from :- p/Rank, file-from :- p/File]
-    (let [to-rank (- rank-from abs)]
-      (when (>= to-rank 0) [to-rank (mod ((if plusfile + -)
-                                           file-from abs) 24)]))))
+   (let [to-rank (- rank-from abs)]
+     (when (>= to-rank 0) [to-rank (mod ((if plusfile + -)
+                                         file-from abs) 24)]))))
 
 (s/defn add-diag-inward :- Pos
   ([plusfile :- s/Bool, abs :- RankAbs, from :- Pos]
-    (add-diag-inward plusfile abs (rank from) (file from)))
+   (add-diag-inward plusfile abs (rank from) (file from)))
   ([plusfile :- s/Bool, abs :- RankAbs, rank-from :- p/Rank, file-from :- p/File]
-    (let [from-plus-abs (+ rank-from abs)]
-      (cond (< from-plus-abs 5) [from-plus-abs
-                                 (mod ((if plusfile + -) file-from abs) 24)]
-            :else (let [further (- from-plus-abs 6)
-                        how-much-here (- 5 rank-from)
-                        file-after-direct (mod ((cond plusfile + :else -)
-                                                 file-from how-much-here) 24)]
-                    (cond (= further -1) [5 file-after-direct]
-                          :else (cond (> further 5) nil
-                                      :else (let [rank-after (- 5 further)
-                                                  solely-thru-center-file
-                                                  (mod (+
-                                                         file-after-direct
-                                                         (cond (:plusfile vec)
-                                                               -10 :else 10))
-                                                       24)]
-                                              (cond (zero? further) [5 solely-thru-center-file]
-                                                    :else [rank-after
-                                                           (mod ((cond (not (:plusfile vec))
-                                                                       + :else -)
-                                                                  solely-thru-center-file
-                                                                  further) 24)])))))))))
+   (let [from-plus-abs (+ rank-from abs)]
+     (cond (< from-plus-abs 5) [from-plus-abs
+                                (mod ((if plusfile + -) file-from abs) 24)]
+           :else (let [further (- from-plus-abs 6)
+                       how-much-here (- 5 rank-from)
+                       file-after-direct (mod ((cond plusfile + :else -)
+                                               file-from how-much-here) 24)]
+                   (cond (= further -1) [5 file-after-direct]
+                         :else (cond (> further 5) nil
+                                     :else (let [rank-after (- 5 further)
+                                                 solely-thru-center-file
+                                                 (mod (+
+                                                        file-after-direct
+                                                        (cond (:plusfile vec)
+                                                              -10 :else 10))
+                                                      24)]
+                                             (cond (zero? further) [5 solely-thru-center-file]
+                                                   :else [rank-after
+                                                          (mod ((cond (not (:plusfile vec))
+                                                                      + :else -)
+                                                                solely-thru-center-file
+                                                                 further) 24)])))))))))
 
 (s/defn add-diag-vec :- Pos [vec :- DiagOrPawnCapVec, from :- Pos]
   (let [abs (abs vec)
@@ -237,7 +237,7 @@
 (s/defn add-file-vec :- Pos [vec :- FileVec, from :- Pos]
   (let [abs (abs vec)]
     [(rank from) (mod ((cond (:plusfile vec) + :else -)
-                        (file from) abs) 24)]))
+                       (file from) abs) 24)]))
 
 ;addvec returns nil in place of VectorAdditionFailedException
 ;;but how to represent it with schema?
@@ -249,6 +249,27 @@
                               (is-diagvec? vec) (add-diag-vec vec from)
                               (is-rankvec? vec) (add-rank-vec vec from)
                               (is-filevec? vec) (add-file-vec vec from)))
+
+(s/defn destinations-of-a-sequence-of-vecs :- [Pos]
+  [units :- [Vec], from :- Pos]
+  ;(if (= 1 (count units)) [(addvec (first units) from)]
+  ;                        (recur (rest units) (addvec (first units) from))))
+  (if (empty? units)
+    []
+    (loop [prev '(from), left units]
+      (if (= 1 (count units)) (conj (rest prev) (addvec (first units) from))
+                              (recur
+                                (conj prev (addvec (first units) (last prev)))
+                                (rest units))))))
+
+
+(s/defn empties-cont-vec :- [Pos] [vec :- ContVecNoProm, from :- Pos]
+  (let [units (units vec (rank from))]
+    (destinations-of-a-sequence-of-vecs
+      (butlast units)
+      from)))
+
+(defn empties [vec,from] []) ;;TODO
 
 (def BoundVec {(s/required-key :from) Pos
                (s/required-key :vec)  Vec})
@@ -264,11 +285,11 @@
                                             (and (not (:plusfile vec)) (= mod (file from) 8) 0))))
 
 (s/defn wrappedfilevec :- FileAbs ([t :- File, f :- File, wlong :- s/Bool]
-                                    (let [diff (- t f)
-                                          sgnf (if (neg? diff) - +)]
-                                      (if (= wlong (< 12 (sgnf diff)))
-                                        diff
-                                        (- diff (sgnf 24)))))
+                                   (let [diff (- t f)
+                                         sgnf (if (neg? diff) - +)]
+                                     (if (= wlong (< 12 (sgnf diff)))
+                                       diff
+                                       (- diff (sgnf 24)))))
   ([t :- File, f :- File] (wrappedfilevec t f false)))
 
 (def vecft {
@@ -293,8 +314,8 @@
                                                                      (tfmapset :plusfile)))))
             ::pawnvec         (fn [from to] (first (filter (complement nil?)
                                                            '((::pawnwalkvec vecft)
-                                                              (::pawnlongjumpvec vecft)
-                                                              (::pawncapvec vecft)))))
+                                                             (::pawnlongjumpvec vecft)
+                                                             (::pawncapvec vecft)))))
             ::rankvec         (fn [from to] (cond (same-or-opposite-file from to)
                                                   (let [t (if (same-file from to)
                                                             (- (rank to) (rank from))
@@ -313,8 +334,8 @@
                                                                (cond (not (= 0 absdiff))
                                                                      '({:plusfile plusfile
                                                                         :abs absdiff}
-                                                                        {:plusfile (not plusfile)
-                                                                         :abs (- 24 absdiff)}))))))
+                                                                       {:plusfile (not plusfile)
+                                                                        :abs (- 24 absdiff)}))))))
             ::knightvec       (fn [from to] (first
                                               (filter #(= to (addvec % from))
                                                       (set/join (tfmapset :inward)
@@ -328,7 +349,7 @@
                                                                            (tfmapset :plusfile))))))
             ::kingvec         (fn [from to] (first (filter (complement nil?)
                                                            '((::castlingvec vecft)
-                                                              (::kingcontvec vecft)))))
+                                                             (::kingcontvec vecft)))))
             ::diagvec         (fn [from to] (let [filediff (wrappedfilevec (file from) (file to))
                                                   plusfile (> filediff 0)
                                                   absfilediff (if plusfile filediff (- filediff))
@@ -347,8 +368,8 @@
                                                             {:abs    (- (+ 5 5 1) ranksum) ;; (5-s)+1+(5-r)
                                                              :inward true
                                                              :plusfile (not plusfile)})]
-                                              (filter (complement nil?) '(ser ler))))
-            })
+                                              (filter (complement nil?) '(ser ler))))})
+
 
 (def tvec {:pawn   ::pawnvec
            :rook   ::axisvec

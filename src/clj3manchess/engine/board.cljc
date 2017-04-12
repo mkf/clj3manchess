@@ -70,6 +70,25 @@
   (if (= (getb (first b) pos) what) [(first b) (dissoc (second b) pos)]
                                     [(first b) (assoc (second b) pos what)]))
 
+(s/defn put-onto-newgame-board :- DiffBoard [pos :- Pos, what :- Square]
+  (put-onto-diff-board [::newgame {}] pos what))
+
+(s/defn put :- Board [b :- Board, pos :- Pos, what :- Square]
+  (cond
+    (vector? b) (if (diff-board? b) (put-onto-diff-board b pos what)
+                                    (put-onto-array-board b pos what))
+    (map? b) (put-onto-map-board b pos what)
+    (= b ::newgame) (put-onto-newgame-board pos what)))
+
+(s/defn clr :- Board [b :- Board, pos :- Pos]
+  (put b pos nil))
+
+(s/defn mov :- Board [b :- Board, from :- Pos, to :- Pos]
+  (let [what (getb b from)]
+    (-> b
+        (clr from)
+        (put to what))))
+
 (s/defn fill-map-board :- MapBoard [b :- Board]
   (->> p/all-pos
        (map (fn [x] [x (getb b x)]))

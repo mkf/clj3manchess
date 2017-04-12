@@ -13,11 +13,19 @@
                      :white 0 :gray 1 :black 2)))
 (def EnPassant {(s/optional-key :prev) p/File
                 (s/optional-key :last) p/File})
-(s/defn match-ep :- (s/maybe (s/enum :prev :last)) [ep :- EnPassant, where :- p/Pos]
+(s/defn match-ep :- (s/maybe (s/enum :prev :last))
+  [ep :- EnPassant, where :- p/Pos]
   (when (#{2 3} (rank where))
     (case (file where)
       (:last ep) :last
       (:prev ep) :prev)))
+(s/defn matching-ep :- s/Bool
+  [ep :- EnPassant, where :- p/Pos, color-of-ours :- c/Color, color-of-captured :- c/Color]
+  (let [match (match-ep ep where)]
+    (case match
+      :last (= (c/prev-col color-of-ours) color-of-captured)
+      :prev (= (c/next-col color-of-ours) color-of-captured)
+      false)))
 (def Alive #{c/Color})
 (def State {(s/required-key :board)          b/Board
             (s/required-key :moats)          MoatsState
@@ -27,4 +35,3 @@
             (s/required-key :halfmoveclock)  s/Int
             (s/required-key :fullmovenumber) s/Int
             (s/required-key :alive)          Alive})
-

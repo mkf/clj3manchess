@@ -4,6 +4,10 @@
 
 (def CastlingType (s/enum :queenside :kingside))
 
-(def ColorCastlingPossibilities {CastlingType s/Bool})
+(def CastlingPossibility {(s/required-key :color) Color
+                          (s/required-key :type) CastlingType})
 
-(def CastlingPossibilities {Color ColorCastlingPossibilities})
+;;(def ColorCastlingPossibilities {CastlingType})
+
+;;(def CastlingPossibilities {Color ColorCastlingPossibilities})
+(def CastlingPossibilities #{CastlingPossibility})
