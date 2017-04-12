@@ -92,3 +92,6 @@
   [r :- [Square]] (str "[" (stri/join " " (map f/figstr r)) "]"))
 (s/defn string-of-arrayboard :- s/Str
   [b :- ArrayBoard] (str "[" (stri/join " \n " (map string-of-rank (reverse b))) "]"))
+
+(s/defn check-empties :- s/Bool
+  [b :- Board , w :- [Pos]] (every? true? (map nil? (map #(getb b %) w))))

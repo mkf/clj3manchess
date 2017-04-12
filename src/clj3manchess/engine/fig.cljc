@@ -17,6 +17,8 @@
            (s/required-key :color)         Color
            (s/required-key :crossedCenter) s/Bool})
 (def Fig (s/either FigNotPawn Pawn))
+(def promfigtypes #{:rook :knight :bishop :queen})
+(def PromFigType (apply s/enum promfigtypes))
 
 (def figrunes {:pawn   {:white "P" :gray "Þ" :black "p"}
                :rook   {:white "R" :gray "®" :black "r"}
