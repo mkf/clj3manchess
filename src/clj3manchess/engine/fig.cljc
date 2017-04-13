@@ -20,10 +20,10 @@
 (def promfigtypes #{:rook :knight :bishop :queen})
 (def PromFigType (apply s/enum promfigtypes))
 
-(def figrunes {:pawn   {:white "P" :gray "Þ" :black "p"}
-               :rook   {:white "R" :gray "®" :black "r"}
+(def figrunes {:pawn   {:white "P" :gray "^" :black "p"}
+               :rook   {:white "R" :gray "#" :black "r"}
                :knight {:white "N" :gray "ń" :black "n"}
-               :bishop {:white "B" :gray "¡" :black "b"}
+               :bishop {:white "B" :gray "|" :black "b"}
                :queen  {:white "Q" :gray "Ω" :black "q"}
                :king   {:white "K" :gray "¥" :black "k"}})
 

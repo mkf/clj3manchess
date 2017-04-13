@@ -6,7 +6,8 @@
             [clj3manchess.engine.fig :as f]
             [clj3manchess.engine.board :as b]
             [clj3manchess.engine.color :as c]
-            [clojure.set :as se]))
+            [clojure.set :as se]
+            [clj3manchess.engine.castling :as ca]))
 
 (def VecMove {(s/required-key :vec) v/Vec
               (s/required-key :from) p/Pos
@@ -128,3 +129,23 @@
     (-> bef
         (b/clr from)
         (b/put to {:type prom :color color}))))
+
+(s/defn board-after-castling :- b/Board [bef :- b/Board,
+                                         color :- c/Color, castling :- ca/CastlingType]
+  (let [color-segm*8 (* 8 (c/segm color))
+        kfm-on-segm (+ p/kfm color-segm*8)
+        castling-sgnf (castling v/castling-file-diff-sgnf)
+        old-rook-pos (+ color-segm*8 (castling v/castling-bef-rook-pos))
+        to-empty (castling v/castling-empties)
+        to-empty (map (partial + color-segm*8) to-empty)
+        to-empty (conj to-empty kfm-on-segm old-rook-pos)
+        new-king-pos (+ kfm-on-segm (castling-sgnf 2))
+        new-rook-pos (+ kfm-on-segm (castling-sgnf 1))
+        emptied (loop [cur-res bef, left-to to-empty]
+                  (if (empty? left-to) cur-res
+                                       (recur (b/clr cur-res [0 (first left-to)])
+                                              (rest left-to))))]
+    (-> emptied
+        (b/put [0 new-rook-pos] {:type :rook :color color})
+        (b/put [0 new-king-pos] {:type :king :color color})))
+  )

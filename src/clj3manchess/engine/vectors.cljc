@@ -101,7 +101,9 @@
                                                       (zero? n) 0
                                                       (neg? n) -1))
 
+(def castling-file-diff-sgnf {:queenside - :kingside +})
 (def castling-file-diff {:queenside -2 :kingside 2})
+(def castling-bef-rook-pos {:queenside 0 :kingside 7})
 (def castling-empties {:queenside '(3, 2, 1) :kingside '(5, 6)})
 
 (s/defn is-diagvec? :- s/Bool [vec :- Vec] (every? true?
