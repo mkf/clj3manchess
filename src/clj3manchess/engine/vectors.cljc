@@ -15,19 +15,55 @@
 ;(s/def ::inward boolean?)
 ;(s/def ::plusfile boolean?)
 ;(s/def ::centeronecloser boolean?)
+(derive ::jumpvectype ::vectype)
+(derive ::pawnvectype ::jumpvectype)
+(derive ::pawnlongjumpvectype ::pawnvectype)
 (def PawnLongJumpVec (s/eq :pawnlongjumpvec))
+(derive ::knightvectype ::jumpvectype)
 (def KnightVec {(s/required-key :plusfile)        s/Bool
                 (s/required-key :inward)          s/Bool
                 (s/required-key :centeronecloser) s/Bool})
+(derive ::continuousvectype ::vectype)
+(derive ::nopromcontinuousvectype ::continuousvectype)
+(derive ::multicontinuousvectype ::nopromcontinuousvectype)
+(derive ::axisvectype ::continuousvectype)
+(derive ::nopromaxisvectype ::axisvectype)
+(derive ::nopromaxisvectype ::nopromcontinuousvectype)
+(derive ::multiaxisvectype ::multicontinuousvectype)
+(derive ::multiaxisvectype ::nopromaxisvectype)
+(derive ::filevectype ::axisvectype)
+(derive ::nopromfilevectype ::filevectype)
+(derive ::nopromfilevectype ::nopromaxisvectype)
+(derive ::multifilevectype ::nopromfilevectype)
+(derive ::multifilevectype ::multiaxisvectype)
 (def FileVec {(s/required-key :plusfile) s/Bool
               (s/optional-key :abs)      FileAbs})
+(derive ::rankvectype ::axisvectype)
+(derive ::nopromrankvectype ::rankvectype)
+(derive ::nopromrankvectype ::nopromaxisvectype)
+(derive ::multirankvectype ::multiaxisvectype)
+(derive ::multirankvectype ::nopromrankvectype)
 (def RankVec {(s/required-key :inward) s/Bool
               (s/optional-key :abs)    RankAbs})
+(derive ::diagvectype ::continuousvectype)
+(derive ::nopromdiagvectype ::diagvectype)
+(derive ::nopromdiagvectype ::nopromcontinuousvectype)
+(derive ::multidiagvectype ::nopromdiagvectype)
+(derive ::multidiagvectype ::multicontinuousvectype)
 (def DiagVec {(s/required-key :plusfile) s/Bool
               (s/required-key :inward)   s/Bool
               (s/optional-key :abs)      RankAbs})
 (def AxisVec (s/either FileVec RankVec))
 (def Prom (s/enum :queen :rook :bishop :knight))
+(derive ::pawnpromvectype ::pawnvectype)
+(derive ::pawnwalkvec ::pawnvectype)
+(derive ::pawnwalkvec ::rankvectype)
+(derive ::pawnpromwalkvectype ::pawnwalkvec)
+(derive ::pawnpromwalkvectype ::pawnpromvectype)
+(derive ::pawncapvec ::pawnvectype)
+(derive ::pawncapvec ::diagvectype)
+(derive ::pawnpromcapvectype ::pawncapvec)
+(derive ::pawnpromcapvectype ::pawnpromvectype)
 (def PawnWalkVec {(s/required-key :inward) s/Bool
                   (s/optional-key :prom)   Prom})
 (def RankOrPawnWalkVec (s/either RankVec PawnWalkVec))
@@ -61,6 +97,9 @@
 (def Vec (s/either PawnLongJumpVec KnightVec ContVec KingVec))
 
 (s/defn sgn :- (s/enum -1 1) [n :- s/Num] (if (neg? n) -1 1))
+(s/defn ?1:0:-1 :- (s/enum -1 0 1) [n :- s/Num] (cond (pos? n) 1
+                                                      (zero? n) 0
+                                                      (neg? n) -1))
 
 (def castling-file-diff {:queenside -2 :kingside 2})
 (def castling-empties {:queenside '(3, 2, 1) :kingside '(5, 6)})
@@ -184,47 +223,76 @@
 (s/defn add-pawnlongjumpvec :- Pos ([from :- Pos] (when (= (rank from) 1) [3 (file from)]))
   ([_ :- PawnLongJumpVec, from :- Pos] (add-pawnlongjumpvec from)))
 
-(s/defn add-diag-outward :- Pos
-  ([plusfile :- s/Bool, abs :- RankAbs, from :- Pos]
-   (add-diag-outward plusfile abs (rank from) (file from)))
-  ([plusfile :- s/Bool, abs :- RankAbs, rank-from :- p/Rank, file-from :- p/File]
-   (let [to-rank (- rank-from abs)]
-     (when (>= to-rank 0) [to-rank (mod ((if plusfile + -)
+(s/defn add-short-diag :- Pos
+  ([vec :- DiagVec, from :- Pos]
+    (add-short-diag (:inward vec) (:plusfile vec) (abs vec) from))
+  ([inward :- s/Bool, plusfile :- s/Bool, abs :- RankAbs, from :- Pos]
+    (add-short-diag inward plusfile abs (rank from) (file from)))
+  ([inward :- s/Bool, plusfile :- s/Bool, abs :- RankAbs,
+    rank-from :- p/Rank, file-from :- p/File]
+    (let [to-rank ((if inward + -) rank-from abs)]
+      (when (>= 5 to-rank 0) [to-rank (mod ((if plusfile + -)
                                          file-from abs) 24)]))))
 
-(s/defn add-diag-inward :- Pos
-  ([plusfile :- s/Bool, abs :- RankAbs, from :- Pos]
-   (add-diag-inward plusfile abs (rank from) (file from)))
-  ([plusfile :- s/Bool, abs :- RankAbs, rank-from :- p/Rank, file-from :- p/File]
-   (let [from-plus-abs (+ rank-from abs)]
-     (cond (< from-plus-abs 5) [from-plus-abs
-                                (mod ((if plusfile + -) file-from abs) 24)]
-           :else (let [further (- from-plus-abs 6)
-                       how-much-here (- 5 rank-from)
-                       file-after-direct (mod ((cond plusfile + :else -)
-                                               file-from how-much-here) 24)]
-                   (cond (= further -1) [5 file-after-direct]
-                         :else (cond (> further 5) nil
-                                     :else (let [rank-after (- 5 further)
-                                                 solely-thru-center-file
-                                                 (mod (+
-                                                        file-after-direct
-                                                        (cond (:plusfile vec)
-                                                              -10 :else 10))
-                                                      24)]
-                                             (cond (zero? further) [5 solely-thru-center-file]
-                                                   :else [rank-after
-                                                          (mod ((cond (not (:plusfile vec))
-                                                                      + :else -)
-                                                                solely-thru-center-file
-                                                                 further) 24)])))))))))
+(s/defn add-solely-thru-center-diag-file :- File [plusfile :- s/Bool, file-from :- p/File]
+  (mod (+ file-from
+          (if plusfile -10 10))
+       24))
+
+(s/defn diag-split-vecs :- (s/either {(s/required-key :short-upto-rank5) DiagVec}
+                                     {(s/optional-key :short-upto-rank5)      DiagVec
+                                      (s/required-key :solely-thru-center)    KingDiagVec
+                                      (s/optional-key :short-past-the-center) DiagVec})
+  ([vec :- DiagVec, rank-from :- p/Rank]
+    (diag-split-vecs (:inward vec)
+                     (:plusfile vec)
+                     (abs vec)
+                     rank-from))
+  ([inward :- s/Bool, plusfile :- s/Bool, abs :- RankAbs, rank-from :- p/Rank]
+    (if inward (diag-split-vecs plusfile abs rank-from)
+               {:short-upto-rank5
+                (when (>= rank-from abs) {:inward false, :plusfile plusfile, :abs abs})}))
+  ([plusfile :- s/Bool, abs :- RankAbs, rank-from :- p/Rank]
+    (let [from-plus-abs (+ abs rank-from)
+          further (- from-plus-abs 6)]
+      (cond (neg? further)
+            {:short-upto-rank5 {:inward true :plusfile plusfile :abs abs}}
+            (zero? further)
+            {:short-upto-rank5   {:inward true :plusfile plusfile :abs (- abs 1)}
+             :solely-thru-center {:inward true :plusfile plusfile}}
+            (pos? further)
+            {:short-upto-rank5      {:inward true :plusfile plusfile
+                                     :abs    (- abs (inc further))}
+             :solely-thru-center    {:inward true :plusfile plusfile}
+             :short-past-the-center {:inward false :plusfile (not plusfile)
+                                     :abs    further}}))))
+
+
+(s/defn add-unit-diag-vec :- Pos [plusfile :- s/Bool, inward :- s/Bool, from :- Pos]
+  (if (and (= (rank from) 5) inward)
+    [5 (add-solely-thru-center-diag-file plusfile (file from))]
+    (add-short-diag inward plusfile 1 from)))
 
 (s/defn add-diag-vec :- Pos [vec :- DiagOrPawnCapVec, from :- Pos]
+  ;(let [abs (abs vec)
+  ;      {:keys [inward plusfile]} vec]
+  ;  ((if inward
+  ;     add-diag-inward
+  ;     add-diag-outward) plusfile abs from))
   (let [abs (abs vec)
         {:keys [inward plusfile]} vec]
-    ((if inward
-       add-diag-inward
-       add-diag-outward) plusfile abs from)))
+    (if (= 1 abs)
+      (add-unit-diag-vec plusfile inward from)
+      (let [split (diag-split-vecs inward plusfile abs (rank from))
+            {:keys
+             [short-upto-rank5 solely-thru-center short-past-the-center]} split]
+        (((comp (partial apply comp) reverse)
+           [#(if (nil? short-upto-rank5) % (add-short-diag short-upto-rank5 %))
+            #(if (nil? solely-thru-center) % [5 (add-solely-thru-center-diag-file
+                                                  (:plusfile solely-thru-center) (file %))])
+            #(if (nil? short-past-the-center) % (add-short-diag short-past-the-center %))])
+          from)))))
+
 
 (s/defn add-rank-vec :- Pos [vec :- RankOrPawnWalkVec, from :- Pos]
   (let [abs (abs vec)] (cond (:inward vec)
@@ -251,16 +319,16 @@
                               (is-filevec? vec) (add-file-vec vec from)))
 
 (s/defn destinations-of-a-sequence-of-vecs :- [Pos]
-  [units :- [Vec], from :- Pos]
+  [units-seq :- [Vec], fromp :- Pos]
   ;(if (= 1 (count units)) [(addvec (first units) from)]
   ;                        (recur (rest units) (addvec (first units) from))))
-  (if (empty? units)
+  (if (empty? units-seq)
     []
-    (loop [prev '(from), left units]
-      (if (= 1 (count units)) (conj (rest prev) (addvec (first units) from))
-                              (recur
-                                (conj prev (addvec (first units) (last prev)))
-                                (rest units))))))
+    (loop [prev [fromp], left (vec units-seq)]
+      (if (= 1 (count left)) (conj (rest prev) (addvec (first left) (last prev)))
+                             (recur
+                               (conj prev (addvec (first left) (last prev)))
+                               (rest left))))))
 
 
 (s/defn empties-cont-vec :- [Pos] [vec :- ContVecNoProm, from :- Pos]
@@ -268,8 +336,6 @@
     (destinations-of-a-sequence-of-vecs
       (butlast units)
       from)))
-
-(defn empties [vec,from] []) ;;TODO
 
 (def BoundVec {(s/required-key :from) Pos
                (s/required-key :vec)  Vec})

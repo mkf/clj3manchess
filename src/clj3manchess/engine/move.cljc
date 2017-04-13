@@ -5,7 +5,8 @@
             [clj3manchess.engine.pos :as p]
             [clj3manchess.engine.fig :as f]
             [clj3manchess.engine.board :as b]
-            [clj3manchess.engine.color :as c]))
+            [clj3manchess.engine.color :as c]
+            [clojure.set :as se]))
 
 (def VecMove {(s/required-key :vec) v/Vec
               (s/required-key :from) p/Pos
@@ -54,24 +55,28 @@
                        ;  false)
 
 
+(def initially-checked-impossibilities #{:nothing-to-move-here
+                                         :not-your-move
+                                         :cannot-en-passant
+                                         :capturing-own-piece
+                                         :not-all-empties
+                                         :no-castling-possibility
+                                         :capturing-thru-moats
+                                         :passing-unbridged-moats
+                                         :no-promotion
+                                         :wrong-pawn-direction})
+(def later-checked-impossibilities #{:we-in-check
+                                     :castling-over-check
+                                     :initiating-check-thru-moats})
+(def impossibilities (se/union initially-checked-impossibilities
+                               later-checked-impossibilities))
 
-(def impossibilities #{:nothing-to-move-here
-                       :not-your-move
-                       :cannot-en-passant
-                       :capturing-own-piece
-                       :not-all-empties
-                       :no-castling-possibility
-                       :capturing-thru-moats
-                       :passing-unbridged-moats
-                       :we-in-check
-                       :castling-over-check
-                       :initiating-check-thru-moats
-                       :no-promotion
-                       :wrong-pawn-direction})
-
+(def InitiallyCheckedImpossibility (apply s/enum initially-checked-impossibilities))
+(def LaterCheckedImpossibility (apply s/enum later-checked-impossibilities))
 (def Impossibility (apply s/enum impossibilities))
 
-(s/defn initial-impossibilities-check :- (s/maybe Impossibility) [m :- VecMove]
+(s/defn initial-impossibilities-check :- (s/maybe InitiallyCheckedImpossibility)
+  [m :- VecMove]
   (cond
     (nil? (get-bef-sq m (:from m))) :nothing-to-move-here
     (and (= (:type (get-bef-sq m (:from m))) :pawn)
@@ -79,10 +84,19 @@
          (not (can-we-en-passant m))) :cannot-en-passant
     (= (:color (get-bef-sq m (:from m)))
        (:color (get-bef-sq m (to m)))) :capturing-own-piece
-    (not (b/check-empties (:board (:before m)) (v/empties (:vec m) (:from m)))) :not-all-empties
+    (and (contains? (:vec m) :abs)
+         (not (b/check-empties (:board (:before m))
+                               (v/empties-cont-vec (:vec m) (:from m))))) :not-all-empties
     (and (contains? (:vec m) :castling)
-         ((:castling (:before m)) {:type (:castling (:vec m)) :color (:moves-next (:before m))}))
+         ((:castling (:before m))
+           {:type (:castling (:vec m)) :color (:moves-next (:before m))}))
     :no-castling-possibility
+    (and (contains? (:vec m) :castling)
+         (not (b/check-empties
+                (:board (:before m))
+                (->> v/castling-empties
+                     (map (partial + (* 8 (c/segm (:color (:moves-next (:before m)))))))
+                     (map (fn [x] [0 x])))))) :not-all-empties
     false :capturing-thru-moats
     false :passing-unbridged-moats
     ;(= (:type (get-bef-sq m (:from m))) :pawn) (if-not (:inward (:vec m))

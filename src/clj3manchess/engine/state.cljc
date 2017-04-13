@@ -16,9 +16,11 @@
 (s/defn match-ep :- (s/maybe (s/enum :prev :last))
   [ep :- EnPassant, where :- p/Pos]
   (when (#{2 3} (rank where))
-    (case (file where)
-      (:last ep) :last
-      (:prev ep) :prev)))
+    (let [last (:last ep)
+          prev (:prev ep)]
+      (case (file where)
+        last :last
+        prev :prev))))
 (s/defn matching-ep :- s/Bool
   [ep :- EnPassant, where :- p/Pos, color-of-ours :- c/Color, color-of-captured :- c/Color]
   (let [match (match-ep ep where)]
