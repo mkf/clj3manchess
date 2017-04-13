@@ -5,7 +5,8 @@
              :refer [rank file color-segm pos-on-segm same-file same-rank
                      file-dist same-or-opposite-file opposite-file Pos Rank File kfm]]
             [clj3manchess.engine.fig :refer [FigType]]
-            [clj3manchess.engine.castling :as cas :refer [CastlingType]]))
+            [clj3manchess.engine.castling :as cas :refer [CastlingType]]
+            [clj3manchess.engine.color :as c]))
 
 (defn one-if-nil-else-input [input] (if (nil? input) 1 input))
 
@@ -343,6 +344,45 @@
                (s/required-key :vec)  Vec})
 
 (s/defn bv-to :- Pos [bv :- BoundVec] (addvec (:vec bv) (:from bv)))
+
+(s/defn moat-diag-vec :- (s/maybe c/Color) [from :- Pos, to :- Pos, plusfile :- s/Bool]
+  (cond (zero? (rank from))
+        (when plusfile
+          (case (mod (file from) 8)
+            7 (p/color-segm from)
+            0 (c/prev-col (p/color-segm from))))
+        (zero? (rank to))
+        (when-not plusfile
+          (case (mod (file to) 8)
+            7 (p/color-segm to)
+            0 (c/prev-col (p/color-segm to))))))
+(s/defn moats-file-vec :- [c/Color] [from :- Pos, abs :- FileAbs, plusfile :- s/Bool]
+  (when (zero? (rank from))
+    (let [start (p/color-segm from)
+          from (file from)
+          left (mod from 8)
+          tm (if plusfile (- 7 left) left)
+          moating (- abs tm)
+          li [(if plusfile start (c/prev-col start))
+              (c/next-col start)
+              (if plusfile (c/prev-col start) start)]
+          >0-8-16 (if-not (> moating 0)
+                    0 (if-not (> moating 8)
+                        1 (if-not (> moating 16)
+                            2 3)))]
+      (take >0-8-16 li))))
+(def xrqnmv {#{6 0} 1
+             #{7 1} 1
+             #{7 0} 2})
+(s/defn moat-knight-vec :- (s/maybe c/Color) [from :- Pos, to :- Pos]
+  (let [xoreq (when-not (and (> (rank from) 2) (> (rank to) 2))
+                (let [ffm (mod (file from) 8)
+                      tfm (mod (file to) 8)
+                      fms #{ffm tfm}
+                      w (xrqnmv fms)]
+                  (= #{(rank from) (rank to)}
+                     #{0 w})))]
+    (when (true? xoreq) (get c/colors (-> from (file) (+ 2) (quot 8) (mod 3))))))
 
 (s/defn tfmapset :- #{{(s/one s/Keyword "some keyword, but just one") s/Bool}}
   [keyword :- s/Keyword] #{{keyword true} {keyword false}})
