@@ -338,4 +338,5 @@
     (->> sta
          :alive
          (remove died)
+         set
          (assoc sta :alive))))
