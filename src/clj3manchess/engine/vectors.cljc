@@ -195,6 +195,7 @@
 (def ?1:-2 {true 1 false -2})
 (def ?1:0 {true 1 false 0})
 (def ?2:1 {true 2 false 1})
+(def sgnf {true + false -})
 
 (s/defn thru-center-knight-vec? :- s/Bool
   ([vec :- KnightVec, from-rank :- Rank]
@@ -206,17 +207,29 @@
 (s/defn add-knight-vec :- Pos [vec :- KnightVec, from :- Pos]
   (let [{:keys [inward plusfile centeronecloser]} vec
         from-rank (rank from)
-        from-file (file from)]
-    (cond (thru-center-knight-vec? inward centeronecloser from-rank)
-          (cond centeronecloser
-                [(- (+ 5 4) from-rank)
-                 (mod (+ from-file (sgnb plusfile) 12) 24)]
-                :else
-                [5 (mod (+ from-file (sgnb*2 plusfile) 12) 24)])
-          :else
-          [(+ from-rank (?1:-2 plusfile) (?1:0 centeronecloser))
-           (mod (+ from-file (* (?2:1 (not= centeronecloser inward))
-                                (sgnb plusfile))) 24)])))
+        from-file (file from)
+        more-rank (= centeronecloser inward)
+        absrank (?2:1 more-rank)
+        more-file (not more-rank)
+        absfile (?2:1 more-file)
+        rank-mov ((sgnf inward) absrank)
+        file-mov ((sgnf plusfile) absfile)
+        rank-to (+ from-rank rank-mov)
+        thru-pass (> rank-to 5)
+        rank-to (if-not thru-pass rank-to (- 6 (- rank-to 5)))
+        file-to (+ from-file file-mov)
+        file-to (if thru-pass (+ file-to 12) file-to)]
+    [rank-to (mod file-to 24)]))
+    ;; (cond (thru-center-knight-vec? inward centeronecloser from-rank)
+    ;;       (cond centeronecloser
+    ;;             [(- (+ 5 4) from-rank)
+    ;;              (mod (+ from-file (sgnb plusfile) 12) 24)]
+    ;;             :else
+    ;;             [5 (mod (+ from-file (sgnb*2 plusfile) 12) 24)])
+    ;;       :else
+    ;;       [(+ from-rank (?1:-2 plusfile) (?1:0 centeronecloser))
+    ;;        (mod (+ from-file (* (?2:1 (not= centeronecloser inward))
+    ;;                             (sgnb plusfile))) 24)])))
 
 (s/defn add-castling-vec :- Pos
   [vec :- CastlingVec, from :- Pos] (when (and (zero? (rank from)) (= (mod (file from) 8) kfm))
@@ -423,7 +436,7 @@
                                                   (let [t (if (same-file from to)
                                                             (- (rank to) (rank from))
                                                             (- 11 (+ (rank from) (rank to))))
-                                                        inward (> 0 t)
+                                                        inward (< 0 t)
                                                         abs (if inward t (- t))]
                                                     (cond (= 1 abs) {:inward inward}
                                                           (not (= 0 abs))
@@ -434,15 +447,17 @@
                                                                    plusfile (< 0 diff)
                                                                    absdiff
                                                                    (if plusfile diff (- diff))]
-                                                               (cond (not (= 0 absdiff))
+                                                               (cond (and (= (rank to) (rank from))
+                                                                          (not (= 0 absdiff))
+                                                                          (> 24 absdiff))
                                                                      [{:plusfile plusfile
                                                                         :abs absdiff}
                                                                        {:plusfile (not plusfile)
                                                                         :abs (- 24 absdiff)}])))))
-            ::knightvec       (fn [from to] (first
-                                             (filter #(= to (addvec % from))
-                                                     (set/join (tfmapset :inward)
-                                                               (tfmapset :plusfile)
+            ::knightvec       (fn [fromp top] (first
+                                             (filter #(= top (addvec % fromp))
+                                                     (set/join (set/join (tfmapset :inward)
+                                                                         (tfmapset :plusfile))
                                                                (tfmapset :centeronecloser)))))
             ::kingcontvec     (fn [from to] (first
                                              (filter #(= to (addvec % from))
@@ -460,13 +475,13 @@
                                                   absrankdiff (if inwardshort
                                                                 (- (rank to) (rank from))
                                                                 (- (rank from) (rank to)))
-                                                  ser (cond (and (not (= 0 absrankdiff))
+                                                  ser (when (and (not (= 0 absrankdiff))
                                                                  (= absfilediff absrankdiff))
                                                             {:abs absfilediff
                                                              :inward inwardshort
                                                              :plusfile plusfile})
                                                   ranksum (+ (rank to) (rank from))
-                                                  ler (cond (and (not (= 0 absfilediff))
+                                                  ler (when (and (not (= 0 absfilediff))
                                                                  (= absfilediff ranksum))
                                                             {:abs    (- (+ 5 5 1) ranksum) ;; (5-s)+1+(5-r)
                                                              :inward true

@@ -8,7 +8,8 @@
             [clj3manchess.engine.color :as c]
             [clojure.set :as se]
             [clj3manchess.engine.castling :as ca]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [clojure.string :as str]))
 
 (def VecMove {(s/required-key :vec) v/Vec
               (s/required-key :from) p/Pos
@@ -279,3 +280,32 @@
                                 (not (nil? (b/getb board to)))) 0 (inc halfmoveclock))
          :fullmovenumber (inc fullmovenumber)
          :alive alive}))))
+
+(defonce AMFT (->> p/all-pos
+                   (map (fn [from] [from (->> p/all-pos
+                                              (filter (complement #(or (= from %)
+                                                            (and (empty? ((v/vecft ::v/contvec) from %))
+                                                                 (nil? ((v/vecft ::v/knightvec) from %))))))
+                                        (set))]))
+                   (into {})))
+
+(defn testing-tostring-amft-or-sth [vfile predicate]
+    (str/join "\n" (->> (range 6)
+                                       (map (partial - 5))
+                                       (map #(->> (range vfile (+ vfile 24))
+                                                  (map (fn [fx] (mod fx 24)))
+                                                  (map (fn [fx] [% fx]))
+                                                  (map predicate)
+                                                  (map (fn [fx] (if fx "X" "_")))
+                                                  (apply str))))))
+(defn testing-tostring-amft [pos vfile]
+  (testing-tostring-amft-or-sth vfile (AMFT pos)))
+
+(s/defn can-i-move-wo-check :- s/Bool [sta :- st/State, who :- c/Color]
+  (some (fn [from] ) (b/where-are-figs-of-color (:board sta) who)))
+
+(s/defn eval-death :- st/State [sta :- st/State]
+  (let [noking (set (filter (complement (partial contains? (b/where-are-kings (:board sta)))) c/colors))
+        checkmate (set (filter (complement (:alive sta)) c/colors)) ;replace alive-bef with canIMoveWOCheck
+        died (set/union noking checkmate)]
+    sta))
