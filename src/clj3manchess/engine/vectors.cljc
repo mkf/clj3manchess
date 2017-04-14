@@ -409,84 +409,110 @@
                                        (- diff (sgnf 24)))))
   ([t :- File, f :- File] (wrappedfilevec t f false)))
 
-(def vecft {::axisvec         (fn [from to] (set/union (set/select (complement nil?)
-                                                                   #{((::rankvec vecft) from to)})
-                                                       ((::filevec vecft) from to)))
-            ::castlingvec     (fn [from to] (cond (and (= (rank from) 0 (rank to))
-                                                       (= (mod (file from) 8) kfm))
-                                                  (case (mod (file to) 8)
-                                                    2 {:castling :queenside}
-                                                    6 {:castling :kingside}
-                                                    :default nil)))
-            ::contvec         (fn [from to] (set/union ((::axisvec vecft) from to)
-                                                       ((::diagvec vecft) from to)))
-            ::pawnwalkvec     (fn [from to] (first (filter #(= to (addvec % from))
-                                                           (tfmapset :inward))))
-            ::pawnlongjumpvec (fn [from to] (cond (and (= (rank from) 1) (= (rank to) 3)
-                                                       (= (file from) (file to))) :pawnlongjump))
-            ::pawncapvec      (fn [from to] (first (filter #(and (not (creek from %))
-                                                                 (= to (addvec % from)))
-                                                           (set/join (tfmapset :inward)
-                                                                     (tfmapset :plusfile)))))
-            ::pawnvec         (fn [from to] (first (filter (complement nil?)
-                                                           '((::pawnwalkvec vecft)
-                                                             (::pawnlongjumpvec vecft)
-                                                             (::pawncapvec vecft)))))
-            ::rankvec         (fn [from to] (cond (same-or-opposite-file from to)
-                                                  (let [t (if (same-file from to)
-                                                            (- (rank to) (rank from))
-                                                            (- 11 (+ (rank from) (rank to))))
-                                                        inward (< 0 t)
-                                                        abs (if inward t (- t))]
-                                                    (cond (= 1 abs) {:inward inward}
-                                                          (not (= 0 abs))
-                                                          {:inward inward :abs abs}))))
-            ::filevec         (fn [from to] (filter (complement nil?)
-                                                    (sort-by :abs
-                                                             (let [diff (- (file to) (file from))
-                                                                   plusfile (< 0 diff)
-                                                                   absdiff
-                                                                   (if plusfile diff (- diff))]
-                                                               (cond (and (= (rank to) (rank from))
-                                                                          (not (= 0 absdiff))
-                                                                          (> 24 absdiff))
-                                                                     [{:plusfile plusfile
-                                                                        :abs absdiff}
-                                                                       {:plusfile (not plusfile)
-                                                                        :abs (- 24 absdiff)}])))))
-            ::knightvec       (fn [fromp top] (first
-                                             (filter #(= top (addvec % fromp))
-                                                     (set/join (set/join (tfmapset :inward)
-                                                                         (tfmapset :plusfile))
-                                                               (tfmapset :centeronecloser)))))
-            ::kingcontvec     (fn [from to] (first
-                                             (filter #(= to (addvec % from))
-                                                     (set/union (tfmapset :inward)
-                                                                (tfmapset :plusfile)
-                                                                (set/join (tfmapset :inward)
-                                                                          (tfmapset :plusfile))))))
-            ::kingvec         (fn [from to] (first (filter (complement nil?)
-                                                           '((::castlingvec vecft)
-                                                             (::kingcontvec vecft)))))
-            ::diagvec         (fn [from to] (let [filediff (wrappedfilevec (file from) (file to))
-                                                  plusfile (> filediff 0)
-                                                  absfilediff (if plusfile filediff (- filediff))
-                                                  inwardshort (> (rank to) (rank from))
-                                                  absrankdiff (if inwardshort
-                                                                (- (rank to) (rank from))
-                                                                (- (rank from) (rank to)))
-                                                  ser (when (and (not (= 0 absrankdiff))
-                                                                 (= absfilediff absrankdiff))
-                                                            {:abs absfilediff
-                                                             :inward inwardshort
-                                                             :plusfile plusfile})
-                                                  ranksum (+ (rank to) (rank from))
-                                                  ler (when (and (not (= 0 absfilediff))
-                                                                 (= absfilediff ranksum))
-                                                            {:abs    (- (+ 5 5 1) ranksum) ;; (5-s)+1+(5-r)
-                                                             :inward true
-                                                             :plusfile (not plusfile)})]
-                                              (filter (complement nil?) [ser ler])))})
+(s/defn castling-vecft :- (s/maybe CastlingVec) [f :- Pos t :- Pos]
+  (cond (and (= (rank f) 0 (rank t))
+             (= (mod (file f) 8) kfm))
+        (case (mod (file t) 8)
+          2 {:castling :queenside}
+          6 {:castling :kingside}
+          :default nil)))
+(s/defn pawnwalk-vecft :- (s/maybe KingRankVec) [f :- Pos t :- Pos]
+  (first (filter #(= t (addvec % f))
+                 (tfmapset :inward))))
+(s/defn pawnlongjump-vecft :- (s/maybe PawnLongJumpVec) [f :- Pos t :- Pos]
+  (cond (and (= (rank f) 1) (= (rank t) 3)
+             (= (file f) (file t))) :pawnlongjump))
+(s/defn pawncap-vecft :- (s/maybe KingDiagVec) [f :- Pos, t :- Pos]
+  (first (filter #(and (not (creek f %))
+                       (= t (addvec % f)))
+                 (set/join (tfmapset :inward)
+                           (tfmapset :plusfile)))))
+(s/defn pawn-vecft :- (s/maybe PawnVec) [f :- Pos, t :- Pos]
+  (first (filter (complement nil?) [(pawnwalk-vecft f t)
+                                    (pawnlongjump-vecft f t)
+                                    (pawncap-vecft f t)])))
+(s/defn rank-vecft :- (s/maybe RankVec) [from :- Pos, to :- Pos]
+  (cond (same-or-opposite-file from to)
+        (let [t (if (same-file from to)
+                  (- (rank to) (rank from))
+                  (- 11 (+ (rank from) (rank to))))
+              inward (< 0 t)
+              abs (if inward t (- t))]
+          (cond (= 1 abs) {:inward inward}
+                (not (= 0 abs))
+                {:inward inward :abs abs}))))
+(s/defn file-vecft :- (s/maybe FileVec) [from :- Pos, to :- Pos]
+  (filter (complement nil?)
+          (sort-by :abs
+                   (let [diff (- (file to) (file from))
+                         plusfile (< 0 diff)
+                         absdiff
+                         (if plusfile diff (- diff))]
+                     (cond (and (= (rank to) (rank from))
+                                (not (= 0 absdiff))
+                                (> 24 absdiff))
+                           [{:plusfile plusfile
+                             :abs absdiff}
+                            {:plusfile (not plusfile)
+                             :abs (- 24 absdiff)}])))))
+(s/defn knight-vecft :- (s/maybe KnightVec) [fromp :- Pos, top :- Pos]
+  (first
+   (filter #(= top (addvec % fromp))
+           (set/join (set/join (tfmapset :inward)
+                               (tfmapset :plusfile))
+                     (tfmapset :centeronecloser)))))
+(s/defn kingcont-vecft :- (s/maybe KingContVec) [from :- Pos, to :- Pos]
+  (first
+   (filter #(= to (addvec % from))
+           (set/union (tfmapset :inward)
+                      (tfmapset :plusfile)
+                      (set/join (tfmapset :inward)
+                                (tfmapset :plusfile))))))
+(s/defn king-vecft :- (s/maybe KingVec) [from :- Pos, to :- Pos]
+  (first (filter (complement nil?)
+                 [(castling-vecft from to)
+                  (kingcont-vecft from to)])))
+(s/defn diag-vecft :- (s/maybe DiagVec) [from :- Pos, to :- Pos]
+  (let [filediff (wrappedfilevec (file from) (file to))
+        plusfile (> filediff 0)
+        absfilediff (if plusfile filediff (- filediff))
+        inwardshort (> (rank to) (rank from))
+        absrankdiff (if inwardshort
+                      (- (rank to) (rank from))
+                      (- (rank from) (rank to)))
+        ser (when (and (not (= 0 absrankdiff))
+                       (= absfilediff absrankdiff))
+              {:abs absfilediff
+               :inward inwardshort
+               :plusfile plusfile})
+        ranksum (+ (rank to) (rank from))
+        ler (when (and (not (= 0 absfilediff))
+                       (= absfilediff ranksum))
+              {:abs    (- (+ 5 5 1) ranksum) ;; (5-s)+1+(5-r)
+               :inward true
+               :plusfile (not plusfile)})]
+    (filter (complement nil?) [ser ler])))
+(s/defn axis-vecft :- (s/maybe AxisVec) [from :- Pos, to :- Pos]
+  (set/union (set/select (complement nil?)
+                         #{(rank-vecft from to)})
+             (file-vecft from to)))
+(s/defn cont-vecft :- (s/maybe ContVecNoProm) [from :- Pos, to :- Pos]
+  (set/union (axis-vecft from to)
+             (diag-vecft from to)))
+
+(def vecft {::axisvec         axis-vecft
+            ::castlingvec     castling-vecft
+            ::contvec         cont-vecft
+            ::pawnwalkvec     pawnwalk-vecft
+            ::pawnlongjumpvec pawnlongjump-vecft
+            ::pawncapvec      pawncap-vecft
+            ::pawnvec         pawn-vecft
+            ::rankvec         rank-vecft
+            ::filevec         file-vecft
+            ::knightvec       knight-vecft
+            ::kingcontvec     kingcont-vecft
+            ::kingvec         king-vecft
+            ::diagvec         diag-vecft})
 
 (def tvec {:pawn   ::pawnvec
            :rook   ::axisvec
