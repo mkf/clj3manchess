@@ -219,9 +219,9 @@
                       impos (initial-impossibilities-check mov)]
                   (boolean (those-not-disqualifying-threat impos)))))))
 (s/defn is-there-a-threat :- s/Bool
-  ([this :- b/Board, from :- p/Pos, to :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
-   (is-there-a-threat this from to alive ep (:type (b/getb this from))))
-   ([this :- b/Board, from :- p/Pos, to :- p/Pos, alive :- st/Alive, ep :- st/EnPassant, ft :- f/FigType]
+  ([this :- b/Board, to :- p/Pos, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
+   (is-there-a-threat this to from alive ep (:type (b/getb this from))))
+   ([this :- b/Board, to :- p/Pos, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant, ft :- f/FigType]
    (let [vecs-seq ((v/vecft (v/tvec ft)) from to)]
      (is-there-a-threat-with-these-vecs this from alive ep vecs-seq))))
 
