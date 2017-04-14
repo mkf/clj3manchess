@@ -195,11 +195,11 @@
                            (if-not any-unbridged res
                                    (if-not (alive now) (remove (set (both-moats-of-a-color now)) res)
                                            (if (->> (range 8)
-                                                    (apply (partial + (c/segm now)))
-                                                    (apply (partial (vec 0)))
-                                                    (apply (partial b/getb after-board))
-                                                    (apply :color)
-                                                    (apply #{now})
+                                                    (map (partial + (c/segm now)))
+                                                    (map (fn [xx] [0 xx]))
+                                                    (map (partial b/getb after-board))
+                                                    (map :color)
+                                                    (map #{now})
                                                     (every? false?))
                                              (remove (set (both-moats-of-a-color now)) res)
                                              res))))
@@ -221,15 +221,15 @@
 (s/defn is-there-a-threat :- s/Bool
   ([this :- b/Board, to :- p/Pos, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
    (is-there-a-threat this to from alive ep (:type (b/getb this from))))
-   ([this :- b/Board, to :- p/Pos, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant, ft :- f/FigType]
+  ([this :- b/Board, to :- p/Pos, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant, ft :- f/FigType]
    (let [vecs-seq ((v/vecft (v/tvec ft)) from to)]
      (is-there-a-threat-with-these-vecs this from alive ep vecs-seq))))
 
 (s/defn are-we-initiating-a-check-thru-moat :- s/Bool [vec from to who alive ep b]
   (and (not (cond (v/is-filevec? vec) (empty? (v/moats-file-vec from (abs vec) (:plusfile vec)))
-              (v/is-diagvec? vec) (nil? (v/moat-diag-vec from to (:plusfile vec)))
-              (v/is-knights? vec) (nil? (v/moat-knight-vec from to))
-              :else true))
+                  (v/is-diagvec? vec) (nil? (v/moat-diag-vec from to (:plusfile vec)))
+                  (v/is-knights? vec) (nil? (v/moat-knight-vec from to))
+                  :else true))
        (some (->> [(c/prev-col who) (c/next-col who)]
                   (map #(is-there-a-threat b (b/where-is-king b %) to alive ep))))))
 
@@ -284,28 +284,58 @@
 (defonce AMFT (->> p/all-pos
                    (map (fn [from] [from (->> p/all-pos
                                               (filter (complement #(or (= from %)
-                                                            (and (empty? ((v/vecft ::v/contvec) from %))
-                                                                 (nil? ((v/vecft ::v/knightvec) from %))))))
-                                        (set))]))
+                                                                       (and (empty? ((v/vecft ::v/contvec) from %))
+                                                                            (nil? ((v/vecft ::v/knightvec) from %))))))
+                                              (set))]))
                    (into {})))
 
 (defn testing-tostring-amft-or-sth [vfile predicate]
-    (str/join "\n" (->> (range 6)
-                                       (map (partial - 5))
-                                       (map #(->> (range vfile (+ vfile 24))
-                                                  (map (fn [fx] (mod fx 24)))
-                                                  (map (fn [fx] [% fx]))
-                                                  (map predicate)
-                                                  (map (fn [fx] (if fx "X" "_")))
-                                                  (apply str))))))
+  (str/join "\n" (->> (range 6)
+                      (map (partial - 5))
+                      (map #(->> (range vfile (+ vfile 24))
+                                 (map (fn [fx] (mod fx 24)))
+                                 (map (fn [fx] [% fx]))
+                                 (map predicate)
+                                 (map (fn [fx] (if fx "X" "_")))
+                                 (apply str))))))
 (defn testing-tostring-amft [pos vfile]
   (testing-tostring-amft-or-sth vfile (AMFT pos)))
 
-(s/defn can-i-move-wo-check :- s/Bool [sta :- st/State, who :- c/Color]
-  (some (fn [from] ) (b/where-are-figs-of-color (:board sta) who)))
+(s/defn can-i-move-wo-check :- s/Bool
+  ([sta :- st/State, who :- c/Color]
+   (some #(can-i-move-wo-check sta who %) (b/where-are-figs-of-color (:board sta) who)))
+  ([sta who from] (let [type-of-fig-there (:type (b/getb (:board sta) from))
+                        tvec              (v/tvec type-of-fig-there)
+                        vecft             (v/vecft tvec)] (-> #(can-i-move-wo-check sta who from vecft %)
+                                                              (some (AMFT from)))))
+  ([sta who from vecft to] (when-not (nil? to)
+                             (let [vecft (vecft from to)
+                                   vecft (if (and (coll? vecft) (not (map? vecft))) vecft #{vecft})]
+                               (->> vecft
+                                    (some #(can-i-move-wo-check sta who from vecft to %))
+                                    (when-not (->> vecft
+                                               (filter (complement nil?))
+                                               empty?))))))
+  ([sta who from vecft to vect] (let [afterr        (after-sans-eval-death
+                                                     {:vec vect :before sta :from from})
+                                      not-nil       (not (nil? afterr))
+                                      not-impos     (not (impossibilities afterr))
+                                      just-ok-impos (#{:not-your-move :no-promotion} afterr)]
+                                  (and not-nil (or not-impos just-ok-impos)))))
 
 (s/defn eval-death :- st/State [sta :- st/State]
-  (let [noking (set (filter (complement (partial contains? (b/where-are-kings (:board sta)))) c/colors))
-        checkmate (set (filter (complement (:alive sta)) c/colors)) ;replace alive-bef with canIMoveWOCheck
+  (let [noking (-> contains?
+                   (partial (b/where-are-kings (:board sta)))
+                   complement
+                   (filter c/colors)
+                   set)
+        checkmate (-> can-i-move-wo-check
+                      (partial sta)
+                      complement
+                      (filter c/colors)
+                      set)
         died (set/union noking checkmate)]
-    sta))
+    (->> sta
+         :alive
+         (remove died)
+         (assoc sta :alive))))

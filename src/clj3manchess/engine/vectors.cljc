@@ -359,12 +359,14 @@
         (when plusfile
           (case (mod (file from) 8)
             7 (p/color-segm from)
-            0 (c/prev-col (p/color-segm from))))
+            0 (c/prev-col (p/color-segm from))
+            nil))
         (zero? (rank to))
         (when-not plusfile
           (case (mod (file to) 8)
             7 (p/color-segm to)
-            0 (c/prev-col (p/color-segm to))))))
+            0 (c/prev-col (p/color-segm to))
+            nil))))
 (s/defn moats-file-vec :- [c/Color] [from :- Pos, abs :- FileAbs, plusfile :- s/Bool]
   (when (zero? (rank from))
     (let [start   (p/color-segm from)
