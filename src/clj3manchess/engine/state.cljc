@@ -5,12 +5,13 @@
             [clj3manchess.engine.castling :as ca]
             [clj3manchess.engine.pos :as p :refer [rank file]]))
 
-(def MoatsState [(s/one s/Bool "w") (s/one s/Bool "g") (s/one s/Bool "b")])
-(s/defn moat-betw-prev-and-this :- s/Bool
-  "Standard way of referring to moats is by color which is next from these surrounding moats"
-  [moats-state :- MoatsState, and-what :- c/Color]
-  (get moats-state (case and-what
-                     :white 0 :gray 1 :black 2)))
+(def MoatsState
+  "Present in set if not yet bridged.
+  Standard way of reffering to moats is by color which is next from these surrounding moats"
+  #{c/Color})
+
+(def moats-state-on-newgame #{:white :gray :black})
+
 (def EnPassant {(s/optional-key :prev) p/File
                 (s/optional-key :last) p/File})
 (s/defn match-ep :- (s/maybe (s/enum :prev :last))

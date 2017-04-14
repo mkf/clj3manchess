@@ -1,7 +1,7 @@
 (ns clj3manchess.engine.move
   (:require [schema.core :as s]
             [clj3manchess.engine.state :as st]
-            [clj3manchess.engine.vectors :as v]
+            [clj3manchess.engine.vectors :as v :refer [abs]]
             [clj3manchess.engine.pos :as p]
             [clj3manchess.engine.fig :as f]
             [clj3manchess.engine.board :as b]
@@ -42,12 +42,15 @@
         (:color (get-bef-sq m (to m)))))
 
 (s/defn can-we-en-passant :- s/Bool [m :- PawnCapVecMove]
-  (let [to-sq (get-bef-sq m (to m))]
-    (and (nil? to-sq)
-         (= :pawn (:type (get-bef-sq m (assoc (to m) 0 3))))
-         (st/matching-ep (:en-passant (:before m)) (to m)
-                         (:moves-next (:before m))
-                         (get-bef-sq m (assoc (to m) 0 3)))))) ;(st/match-ep (:en-passant (:before m)) (to m))]
+  (let [to-sq (get-bef-sq m (to m))
+        from-sq (get-bef-sq m (:from m))
+        enp-sq (get-bef-sq m (assoc (to m) 0 3))]
+    (and ;;(nil? to-sq) not really, imagine a gray queen teleported there
+         ;;             next to jumped white pawn and black pawn ready to cap
+     (= :pawn (:type enp-sq) (:type from-sq))
+     (st/matching-ep (:en-passant (:before m)) (to m)
+                     (:color from-sq);(:moves-next (:before m)) this is handled by :not-your-move
+                     (:color enp-sq))))) ;(st/match-ep (:en-passant (:before m)) (to m))]
                        ;(case match
                        ;  :last (= (c/prev-col (:moves-next (:before m)))
                        ;           (:color (get-bef-sq m (assoc (to m) 0 3))))
@@ -77,6 +80,7 @@
 (def Impossibility (apply s/enum impossibilities))
 
 (s/defn initial-impossibilities-check :- (s/maybe InitiallyCheckedImpossibility)
+  "checks all initially-checked, ending with :no-promotion and :not-your-move"
   [m :- VecMove]
   (cond
     (nil? (get-bef-sq m (:from m))) :nothing-to-move-here
@@ -90,16 +94,24 @@
                                (v/empties-cont-vec (:vec m) (:from m))))) :not-all-empties
     (and (contains? (:vec m) :castling)
          ((:castling (:before m))
-           {:type (:castling (:vec m)) :color (:moves-next (:before m))}))
+          {:type (:castling (:vec m)) :color (:moves-next (:before m))}))
     :no-castling-possibility
     (and (contains? (:vec m) :castling)
          (not (b/check-empties
-                (:board (:before m))
-                (->> v/castling-empties
-                     (map (partial + (* 8 (c/segm (:color (:moves-next (:before m)))))))
-                     (map (fn [x] [0 x])))))) :not-all-empties
-    false :capturing-thru-moats
-    false :passing-unbridged-moats
+               (:board (:before m))
+               (->> v/castling-empties
+                    (map (partial + (* 8 (c/segm (:color (:moves-next (:before m)))))))
+                    (map (fn [x] [0 x])))))) :not-all-empties
+    (and (not (nil? (get-bef-sq m (to m))))
+         (not (cond (v/is-filevec? (:vec m)) (empty? (v/moats-file-vec (:from m) (abs (:vec m)) (:plusfile (:vec m))))
+                    (v/is-diagvec? (:vec m)) (nil? (v/moat-diag-vec (:from m) (to m) (:plusfile (:vec m))))
+                    (v/is-knights? (:vec m)) (nil? (v/moat-knight-vec (:from m) (to m)))
+                    :else true))) :capturing-thru-moats
+    (when-let [unbridged (not-empty (:moats (:before m)))]
+      (cond (v/is-filevec? (:vec m)) (some unbridged
+                                           (v/moats-file-vec (:from m) (abs (:vec m)) (:plusfile (:vec m))))
+            (v/is-diagvec? (:vec m)) (unbridged (v/moat-diag-vec (:from m) (to m) (:plusfile (:vec m))))
+            (v/is-knights? (:vec m)) (unbridged (v/moat-knight-vec (:from m) (to m))))) :passing-unbridged-moats
     ;(= (:type (get-bef-sq m (:from m))) :pawn) (if-not (:inward (:vec m))
     ;                                             (if-not (:crossedCenter (get-bef-sq m (:from m)))
     ;                                               :wrong-pawn-direction
@@ -112,11 +124,14 @@
     (not= (:moves-next (:before m))
           (:color (get-bef-sq m (:from m)))) :not-your-move))
 
+(s/defn are-we-initiating-a-check-thru-moat :- s/Bool [] false) ;;TODO
+
 (s/defn board-after-pawn-cap :- b/Board [bef :- b/Board,
                                          from :- p/Pos, to :- p/Pos,
                                          ep :- st/EnPassant]
   (let [we (b/getb bef from)]
-    (if (st/matching-ep ep to (:color we) (:color (b/getb bef [3 (p/file to)])))
+    (if (and (st/matching-ep ep to (:color we) (:color (b/getb bef [3 (p/file to)])))
+             (= (:type (b/getb bef [3 (p/file to)])) :pawn))
       (-> bef
           (b/mov from to)
           (b/clr [3 (p/file to)]))
@@ -143,9 +158,63 @@
         new-rook-pos (+ kfm-on-segm (castling-sgnf 1))
         emptied (loop [cur-res bef, left-to to-empty]
                   (if (empty? left-to) cur-res
-                                       (recur (b/clr cur-res [0 (first left-to)])
-                                              (rest left-to))))]
+                      (recur (b/clr cur-res [0 (first left-to)])
+                             (rest left-to))))]
     (-> emptied
         (b/put [0 new-rook-pos] {:type :rook :color color})
-        (b/put [0 new-king-pos] {:type :king :color color})))
-  )
+        (b/put [0 new-king-pos] {:type :king :color color}))))
+
+(s/defn both-sides-of-a-color-unbridged :- s/Bool [m :- st/MoatsState, col :- c/Color]
+  (and (m col)
+       (m (c/next-col col))))
+
+(s/defn any-side-of-a-color-unbridged :- s/Bool [m :- st/MoatsState, col :- c/Color]
+  (or (m col)
+      (m (c/next-col col))))
+
+(s/defn both-sides-of-a-color-bridged :- s/Bool [m :- st/MoatsState, col :- c/Color]
+  (not (any-side-of-a-color-unbridged m col)))
+
+(s/defn both-moats-of-a-color :- [(s/one c/Color "left") (s/one c/Color "right")] [col :- c/Color]
+  [col (c/next-col col)])
+
+(s/defn after-moats-state :- st/MoatsState [vecmove :- VecMove, after-board :- b/Board]
+  (let [{:keys [vec before from]}   vecmove
+        {:keys [moats board alive]} before
+        condit                      (and (not (v/is-castvec? vec))
+                                         (or (not= (:type (b/getb board from)) :pawn)
+                                             (contains? vec :prom)))]
+    (if-not condit moats
+            (loop [res moats, left c/colors]
+              (if (empty? left) res
+                  (recur (let [now           (first left)
+                               any-unbridged (any-side-of-a-color-unbridged moats now)]
+                           (if-not any-unbridged res
+                                   (if-not (alive now) (remove (set (both-moats-of-a-color now)) res)
+                                           (if (->> (range 8)
+                                                    (apply (partial + (c/segm now)))
+                                                    (apply (partial (vec 0)))
+                                                    (apply (partial b/getb after-board))
+                                                    (apply :color)
+                                                    (apply #{now})
+                                                    (every? false?))
+                                             (remove (set (both-moats-of-a-color now)) res)
+                                             res))))
+                         (rest left)))))))
+
+(s/defn after-sans-eval-death :- (s/either st/State Impossibility) [vecmove :- VecMove]
+  (if-let [impos (initial-impossibilities-check vecmove)]
+    impos
+    (let [{:keys [before vec from]} vecmove
+          m vecmove ;;just an alias
+          {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive]} before
+          to (v/addvec vec from)
+          new-board (cond (v/is-castvec? vec) (board-after-castling board moves-next (:castling vec))
+                          (and (v/is-diagvec? vec)
+                               (= (:type (get-bef-sq m (:from m))) :pawn)) (board-after-pawn-cap board from to en-passant)
+                          (f/promfigtypes (:prom vec)) (board-after-pawn-prom board from to (:prom vec))
+                          :else (b/mov board from to))
+          new-en-passant (if (nil? (:last en-passant)) {} {:prev (:last en-passant)})
+          new-en-passant (if (= :pawnlongjump vec) (assoc :last (p/file from) new-en-passant) new-en-passant)]
+      (if (are-we-initiating-a-check-thru-moat) :initiating-check-thru-moats
+          :not-your-move)))) ;;just a placeholder
