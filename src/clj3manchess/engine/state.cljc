@@ -3,7 +3,8 @@
             [clj3manchess.engine.color :as c]
             [clj3manchess.engine.board :as b]
             [clj3manchess.engine.castling :as ca]
-            [clj3manchess.engine.pos :as p :refer [rank file]]))
+            [clj3manchess.engine.pos :as p :refer [rank file]]
+            [clojure.set :as set]))
 
 (def MoatsState
   "Present in set if not yet bridged.
@@ -38,3 +39,11 @@
             (s/required-key :halfmoveclock)  s/Int
             (s/required-key :fullmovenumber) s/Int
             (s/required-key :alive)          Alive})
+(defonce newgame {:board :clj3manchess.engine.board/newgame
+                  :moats moats-state-on-newgame
+                  :moves-next :white
+                  :castling (set/join (map (fn [x] {:color x}) c/colors)
+                                      (map (fn [x] {:type x}) #{:queenside :kingside}))
+                  :en-passant {}
+                  :halfmoveclock 0 :fullmovenumber 0
+                  :alive (set c/colors)})

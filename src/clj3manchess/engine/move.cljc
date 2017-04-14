@@ -2,12 +2,13 @@
   (:require [schema.core :as s]
             [clj3manchess.engine.state :as st]
             [clj3manchess.engine.vectors :as v :refer [abs]]
-            [clj3manchess.engine.pos :as p]
+            [clj3manchess.engine.pos :as p :refer [rank file]]
             [clj3manchess.engine.fig :as f]
             [clj3manchess.engine.board :as b]
             [clj3manchess.engine.color :as c]
             [clojure.set :as se]
-            [clj3manchess.engine.castling :as ca]))
+            [clj3manchess.engine.castling :as ca]
+            [clojure.set :as set]))
 
 (def VecMove {(s/required-key :vec) v/Vec
               (s/required-key :from) p/Pos
@@ -127,8 +128,6 @@
     (not= (:moves-next (:before m))
           (:color (get-bef-sq m (:from m)))) :not-your-move))
 
-(s/defn are-we-initiating-a-check-thru-moat :- s/Bool [] false) ;;TODO
-
 (s/defn board-after-pawn-cap :- b/Board [bef :- b/Board,
                                          from :- p/Pos, to :- p/Pos,
                                          ep :- st/EnPassant]
@@ -225,6 +224,36 @@
    (let [vecs-seq ((v/vecft (v/tvec ft)) from to)]
      (is-there-a-threat-with-these-vecs this from alive ep vecs-seq))))
 
+(s/defn are-we-initiating-a-check-thru-moat :- s/Bool [vec from to who alive ep b]
+  (and (not (cond (v/is-filevec? vec) (empty? (v/moats-file-vec from (abs vec) (:plusfile vec)))
+              (v/is-diagvec? vec) (nil? (v/moat-diag-vec from to (:plusfile vec)))
+              (v/is-knights? vec) (nil? (v/moat-knight-vec from to))
+              :else true))
+       (some (->> [(c/prev-col who) (c/next-col who)]
+                  (map #(is-there-a-threat b (b/where-is-king b %) to alive ep))))))
+
+(defonce queenside-rook-pos (v/castling-bef-rook-pos :queenside))
+(defonce kingside-rook-pos (v/castling-bef-rook-pos :kingside))
+
+(s/defn after-castling :- ca/CastlingPossibilities [bef-cas :- ca/CastlingPossibilities
+                                                    who :- c/Color
+                                                    ft :- f/FigType
+                                                    from :- p/Pos, to :- p/Pos]
+  (->> bef-cas
+       (remove (set/join #{{:color who}} (case ft
+                                           :king #{{:type :queenside} {:type :kingside}}
+                                           :rook #{{:type (when (zero? (rank from))
+                                                            (case (- (file from) (* (c/segm who) 8))
+                                                              queenside-rook-pos :queenside
+                                                              kingside-rook-pos :kingside))}}
+                                           nil)))
+       (remove (set/join #{{:color (p/color-segm to)}} (when (zero? (rank to))
+                                                         (case (mod (file to) 8)
+                                                           queenside-rook-pos #{{:type :queenside}}
+                                                           kingside-rook-pos #{{:type :kingside}}
+                                                           p/kfm #{{:type :kingside} {:type :queenside}}
+                                                           nil))))))
+
 (s/defn after-sans-eval-death :- (s/either st/State Impossibility) [vecmove :- VecMove]
   (if-let [impos (initial-impossibilities-check vecmove)]
     impos
@@ -239,5 +268,14 @@
                           :else (b/mov board from to))
           new-en-passant (if (nil? (:last en-passant)) {} {:prev (:last en-passant)})
           new-en-passant (if (= :pawnlongjump vec) (assoc :last (p/file from) new-en-passant) new-en-passant)]
-      (if (are-we-initiating-a-check-thru-moat) :initiating-check-thru-moats
-          :not-your-move)))) ;;just a placeholder
+      (if (are-we-initiating-a-check-thru-moat vec from to moves-next alive new-en-passant new-board)
+        :initiating-check-thru-moats
+        {:board new-board
+         :moats (after-moats-state vecmove new-board)
+         :moves-next (if (alive (c/next-col moves-next)) (c/next-col moves-next) (c/prev-col moves-next))
+         :castling (after-castling castling moves-next (:type (get-bef-sq m (:from m))) from to)
+         :en-passant new-en-passant
+         :halfmoveclock (if (or (= (:type (b/getb board from)) :pawn)
+                                (not (nil? (b/getb board to)))) 0 (inc halfmoveclock))
+         :fullmovenumber (inc fullmovenumber)
+         :alive alive}))))
