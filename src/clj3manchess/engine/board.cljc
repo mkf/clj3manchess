@@ -3,7 +3,8 @@
             [clj3manchess.engine.fig :as f :refer [FigType Fig]]
             [clj3manchess.engine.vectors :as vec]
             [clj3manchess.engine.pos :as p :refer [Pos rank file]]
-            [clojure.string :as stri]))
+            [clojure.string :as stri]
+            [clj3manchess.engine.color :as c]))
 
 ;(s/def ::arrayboardrank (s/coll-of ::fig :kind vector? :count 24 :distinct false))
 ;(s/def ::arrayboard (s/coll-of ::arrayboardrank :kind vector? :count 6 :distinct false))
@@ -53,14 +54,30 @@
     (vector? b) (if (diff-board? b) (get-from-diff-board b pos) (get-from-array-board b pos))
     :else (get-from-abs-board b pos)))
 
+(s/defn where-are-figs :- [Pos] [b :- Board, fig :- Fig]
+  (filter (comp (partial = fig)
+                (partial getb b)) p/all-pos))
+(s/defn where-are-figs-of-type :- [Pos] [b :- Board, typ :- FigType]
+  (filter (comp (partial = typ)
+                :type
+                (partial getb b)) p/all-pos))
+(s/defn where-are-kings :- {c/Color Pos} [b :- Board]
+  (into {} (map (fn [x] [(:color (getb b x)) x]) (where-are-figs-of-type b :king))))
+(s/defn where-are-figs-of-color :- [Pos] [b :- Board, col :- c/Color]
+  (filter (comp (partial = col)
+                :color
+                (partial getb b)) p/all-pos))
+(s/defn where-is-fig :- (s/maybe Pos) [b :- Board, fig :- Fig] (first (where-are-figs b fig)))
+(s/defn where-is-king :- (s/maybe Pos) [b :- Board, col :- c/Color] (where-is-fig b {:type :king :color col}))
+
 (s/defn put-onto-array-board :- ArrayBoard [b :- ArrayBoard, pos :- Pos, what :- Square]
   (let [b (if (>= (count b) (rank pos)) b (into b (repeat (- (rank pos) (count b)) [])))
         the-rank (get b (rank pos))
         b (if (>= (count the-rank) (file pos))
             b (assoc b (rank pos)
-                       (into the-rank
-                             (repeat (- (file pos) (count the-rank))
-                                     []))))]
+                     (into the-rank
+                           (repeat (- (file pos) (count the-rank))
+                                   []))))]
     (assoc-in b pos what)))
 
 (s/defn put-onto-map-board :- MapBoard [b :- MapBoard, pos :- Pos, what :- Square]
@@ -68,7 +85,7 @@
 
 (s/defn put-onto-diff-board :- DiffBoard [b :- DiffBoard, pos :- Pos, what :- Square]
   (if (= (getb (first b) pos) what) [(first b) (dissoc (second b) pos)]
-                                    [(first b) (assoc (second b) pos what)]))
+      [(first b) (assoc (second b) pos what)]))
 
 (s/defn put-onto-newgame-board :- DiffBoard [pos :- Pos, what :- Square]
   (put-onto-diff-board [::newgame {}] pos what))
@@ -76,7 +93,7 @@
 (s/defn put :- Board [b :- Board, pos :- Pos, what :- Square]
   (cond
     (vector? b) (if (diff-board? b) (put-onto-diff-board b pos what)
-                                    (put-onto-array-board b pos what))
+                    (put-onto-array-board b pos what))
     (map? b) (put-onto-map-board b pos what)
     (= b ::newgame) (put-onto-newgame-board pos what)))
 

@@ -398,7 +398,7 @@
 
 (def vecft {::axisvec         (fn [from to] (set/union (set/select (complement nil?)
                                                                    #{((::rankvec vecft) from to)})
-                                                       ((:filevec vecft) from to)))
+                                                       ((::filevec vecft) from to)))
             ::castlingvec     (fn [from to] (cond (and (= (rank from) 0 (rank to))
                                                        (= (mod (file from) 8) kfm))
                                                   (case (mod (file to) 8)
@@ -435,10 +435,10 @@
                                                                    absdiff
                                                                    (if plusfile diff (- diff))]
                                                                (cond (not (= 0 absdiff))
-                                                                     '({:plusfile plusfile
+                                                                     [{:plusfile plusfile
                                                                         :abs absdiff}
                                                                        {:plusfile (not plusfile)
-                                                                        :abs (- 24 absdiff)}))))))
+                                                                        :abs (- 24 absdiff)}])))))
             ::knightvec       (fn [from to] (first
                                              (filter #(= to (addvec % from))
                                                      (set/join (tfmapset :inward)
@@ -471,7 +471,7 @@
                                                             {:abs    (- (+ 5 5 1) ranksum) ;; (5-s)+1+(5-r)
                                                              :inward true
                                                              :plusfile (not plusfile)})]
-                                              (filter (complement nil?) '(ser ler))))})
+                                              (filter (complement nil?) [ser ler])))})
 
 (def tvec {:pawn   ::pawnvec
            :rook   ::axisvec

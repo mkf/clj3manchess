@@ -69,6 +69,9 @@
                                          :passing-unbridged-moats
                                          :no-promotion
                                          :wrong-pawn-direction})
+(def those-not-disqualifying-threat #{:no-promotion
+                                      :not-your-move
+                                      nil})
 (def later-checked-impossibilities #{:we-in-check
                                      :castling-over-check
                                      :initiating-check-thru-moats})
@@ -201,6 +204,26 @@
                                              (remove (set (both-moats-of-a-color now)) res)
                                              res))))
                          (rest left)))))))
+
+(s/defn is-there-a-threat-with-these-vecs :- s/Bool
+  [this :- b/Board, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant, vecs :- [v/Vec]]
+  (let [our-before {:board         this
+                    :moats         #{:white :gray :black}
+                    :moves-next    nil
+                    :castling      #{}
+                    :en-passant    ep
+                    :halfmoveclock 0 :fullmovenumber 0
+                    :alive         alive}]
+    (->> vecs
+         (some #(let [mov   {:from from :vec % :before our-before}
+                      impos (initial-impossibilities-check mov)]
+                  (boolean (those-not-disqualifying-threat impos)))))))
+(s/defn is-there-a-threat :- s/Bool
+  ([this :- b/Board, from :- p/Pos, to :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
+   (is-there-a-threat this from to alive ep (:type (b/getb this from))))
+   ([this :- b/Board, from :- p/Pos, to :- p/Pos, alive :- st/Alive, ep :- st/EnPassant, ft :- f/FigType]
+   (let [vecs-seq ((v/vecft (v/tvec ft)) from to)]
+     (is-there-a-threat-with-these-vecs this from alive ep vecs-seq))))
 
 (s/defn after-sans-eval-death :- (s/either st/State Impossibility) [vecmove :- VecMove]
   (if-let [impos (initial-impossibilities-check vecmove)]
