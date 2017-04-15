@@ -340,3 +340,14 @@
          (remove died)
          set
          (assoc sta :alive))))
+(s/defn threat-checking :- [p/Pos] [board :- b/Board, where :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
+  (let [who (:color (b/getb board where))]
+    (->> p/all-pos
+         (map #(if-let [tjf (b/getb board %)]
+                 (when (and (not= (:color tjf) who)
+                            (alive (:color tjf))
+                            (is-there-a-threat board % alive ep (:type tjf))) %)))
+         (filter identity))))
+(s/defn check-checking :- [p/Pos] [board :- b/Board, who :- c/Color, alive :- st/Alive]
+  (when (alive who) (if-let [king-pos (b/where-is-king board who)]
+                      (threat-checking board king-pos alive {}))))
