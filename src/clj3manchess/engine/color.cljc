@@ -7,9 +7,9 @@
 (def ColorIdx (s/enum 1 2 3))
 
 (s/defn segm :- ColorSegm [color :- Color]
-  (case color :white 0 :gray 1 :black 2))
+  (case color :white 0 :gray 1 :black 2 nil))
 
-(s/defn idx :- ColorIdx [color :- Color] (inc (segm color)))
+(s/defn idx :- ColorIdx [color :- Color] (when color (inc (segm color))))
 
 (s/defn next-col :- Color [color :- Color] (case color
                                                :white :gray
