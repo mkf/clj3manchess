@@ -363,50 +363,51 @@
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
     :as m} :- VecMove]
-        (let [nxtcolmvs (c/next-col moves-next)
-              prvcolmvs (c/prev-col moves-next)
-              to (v/addvec vec from)
-              what (b/getb board from)
-              tosq (b/getb board to)
-              whatype (:type what)
-              {:as new-state-after
-               new-board :board
-               new-en-passant :en-passant} (after-sans-eval-death-and-check m)]
-          (if-not (v/is-castvec? vec) new-state-after
-                  (cond (not (empty? (check-checking board moves-next alive))) :castling-over-check
-                        (not (empty? (check-checking new-board moves-next alive))) :we-in-check
-                        (not (empty? (check-checking (apply (partial b/mov new-board)
-                                                            (let [color moves-next
-                                                                  color-segm*8 (* 8 (c/segm color))
-                                                                  kfm-on-segm (+ p/kfm color-segm*8)
-                                                                  castling (:castling vec)
-                                                                  castling-sgnf (castling v/castling-file-diff-sgnf)
-                                                                  new-king-pos (-> kfm-on-segm
-                                                                                   (+ 2)
-                                                                                   (mod 24))
-                                                                  new-rook-pos (-> kfm-on-segm
-                                                                                   (+ 1)
-                                                                                   (mod 24))
-                                                                  new-king-pos [0 new-king-pos]
-                                                                  new-rook-pos [0 new-rook-pos]]
-                                                              [new-king-pos new-rook-pos]))
-                                                     moves-next alive))) :castling-over-check
-                        :else new-state-after))))
+  (let [nxtcolmvs (c/next-col moves-next)
+        prvcolmvs (c/prev-col moves-next)
+        to (v/addvec vec from)
+        what (b/getb board from)
+        tosq (b/getb board to)
+        whatype (:type what)
+        {:as new-state-after
+         new-board :board
+         new-en-passant :en-passant} (after-sans-eval-death-and-check m)]
+    (if-not (v/is-castvec? vec) new-state-after
+            (cond (not (empty? (check-checking board moves-next alive))) :castling-over-check
+                  (not (empty? (check-checking new-board moves-next alive))) :we-in-check
+                  (not (empty? (check-checking (apply (partial b/mov new-board)
+                                                      (let [color moves-next
+                                                            color-segm*8 (* 8 (c/segm color))
+                                                            kfm-on-segm (+ p/kfm color-segm*8)
+                                                            castling (:castling vec)
+                                                            castling-sgnf (castling v/castling-file-diff-sgnf)
+                                                            new-king-pos (-> kfm-on-segm
+                                                                             (+ 2)
+                                                                             (mod 24))
+                                                            new-rook-pos (-> kfm-on-segm
+                                                                             (+ 1)
+                                                                             (mod 24))
+                                                            new-king-pos [0 new-king-pos]
+                                                            new-rook-pos [0 new-rook-pos]]
+                                                        [new-king-pos new-rook-pos]))
+                                               moves-next alive))) :castling-over-check
+                  :else new-state-after))))
 
-(s/defn generate-vecs ; :- #{BoundVec}
-  ([figtype :- f/FigType
-   {:keys [from [rank-to :as to] prom] :as ftp} :- (s/either Desc DescMove)]
-  (->>((v/vecft (v/tvec figtype)) from to)
-      (map (if (and (= figtype :pawn)
-                    (= rank-to 5)
-                    (not (nil? prom)))
-             #(assoc % :prom prom)))
-      (map #(assoc ftp %))))
-  ([{:keys [from before] :as ftp} :- DescMove]
+(defn generate-vecs ; :- #{BoundVec}
+  ([figtype ;;:- f/FigType
+    {:keys [from prom] [rank-to :as to] :to :as ftp}] ;;:- (s/either Desc DescMove)]
+   (->> ((v/vecft (v/tvec figtype)) from to)
+        (#(cond (nil? %) #{} (map? %) #{%} :else %))
+        (map (if (and (= figtype :pawn)
+                      (= rank-to 5)
+                      (not (nil? prom)))
+               #(assoc % :prom prom) identity))
+        (map #(assoc ftp :vec %))))
+  ([{:keys [from before] :as ftp}] ;;:- DescMove]
    (-> ftp
        (get-bef-sq from)
        :type
-       generate-vecs)))
+       (generate-vecs ftp))))
 
 ;(s/defn generate-afters ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
 ;  [])
