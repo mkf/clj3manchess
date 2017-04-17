@@ -392,3 +392,21 @@
                                                               [new-king-pos new-rook-pos]))
                                                      moves-next alive))) :castling-over-check
                         :else new-state-after))))
+
+(s/defn generate-vecs ; :- #{BoundVec}
+  ([figtype :- f/FigType
+   {:keys [from [rank-to :as to] prom] :as ftp} :- (s/either Desc DescMove)]
+  (->>((v/vecft (v/tvec figtype)) from to)
+      (map (if (and (= figtype :pawn)
+                    (= rank-to 5)
+                    (not (nil? prom)))
+             #(assoc % :prom prom)))
+      (map #(assoc ftp %))))
+  ([{:keys [from before] :as ftp} :- DescMove]
+   (-> ftp
+       (get-bef-sq from)
+       :type
+       generate-vecs)))
+
+;(s/defn generate-afters ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
+;  [])
