@@ -1,16 +1,16 @@
 (ns clj3manchess.engine.pos
   (:require
     [clj3manchess.engine.color :as col]
-    [schema.core :as s]))
+    [clojure.spec :as s]))
 
 ;(defrecord Pos [rank file])
-(def Rank (apply s/enum (range 6)))
-(def File (apply s/enum (range 24)))
-(def FileOnSegm (apply s/enum (range 8)))
-(def Pos [(s/one Rank "rank") (s/one File "file")])
+(s/def ::rank (set (range 6)))
+(s/def ::file (set (range 24)))
+(s/def ::file-on-segm (set (range 8)))
+(s/def ::pos (s/tuple ::rank ::file))
 
-(s/defn rank :- Rank [pos :- Pos] (first pos))
-(s/defn file :- File [pos :- Pos] (last pos))
+(defn rank [[rank file]] rank)
+(defn file [[rank file]] file)
 
 (def kfm 4)
 

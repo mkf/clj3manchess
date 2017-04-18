@@ -1,5 +1,6 @@
 (ns clj3manchess.engine.move
-  (:require [schema.core :as s]
+  (:require #?{:clj [clojure.spec :as s]
+               :cljs [cljs.spec :as s]}
             [clj3manchess.engine.state :as st]
             [clj3manchess.engine.vectors :as v :refer [abs]]
             [clj3manchess.engine.pos :as p :refer [rank file]]
