@@ -402,12 +402,14 @@
                       (= rank-to 5)
                       (not (nil? prom)))
                #(assoc % :prom prom) identity))
-        (map #(assoc ftp :vec %))))
+        (map #(assoc ftp :vec %))
+        set))
   ([{:keys [from before] :as ftp}] ;;:- DescMove]
    (-> ftp
        (get-bef-sq from)
        :type
-       (generate-vecs ftp))))
+       (generate-vecs ftp)
+       set)))
 
 ;(s/defn generate-afters ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
 ;  [])
