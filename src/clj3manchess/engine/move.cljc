@@ -392,7 +392,13 @@
                                                         [new-king-pos new-rook-pos]))
                                                moves-next alive))) :castling-over-check
                   :else new-state-after))))
-
+(s/defn after [{vec :vec :as m} :- VecMove]
+  (let [sans-check (after-sans-eval-death m)]
+    (if-not (map? sans-check) sans-check
+            (let [{:keys [board moves-next alive]} sans-check
+                  we (c/prev-col moves-next)]
+              (if-not (empty? (check-checking board we alive)) :we-in-check
+                      (eval-death sans-check))))))
 (defn generate-vecs ; :- #{BoundVec}
   ([figtype ;;:- f/FigType
     {:keys [from prom] [rank-to :as to] :to :as ftp}] ;;:- (s/either Desc DescMove)]
@@ -411,5 +417,13 @@
        (generate-vecs ftp)
        set)))
 
-;(s/defn generate-afters ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
-;  [])
+(defn generate-afters-mapentries ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
+  [{before :before :as ftp}] (->> ftp
+                                  generate-vecs
+                                  (map (fn [x] [x (after x)]))))
+(defn generate-afters-seq
+  [{before :before :as ftp}] (->> ftp
+                                  generate-vecs
+                                  (map after)))
+(defn generate-afters-set [ftp] (set (generate-afters-seq ftp)))
+(defn generate-afters-map [ftp] (into {} (generate-afters-mapentries ftp)))
