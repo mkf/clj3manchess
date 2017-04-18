@@ -6,5 +6,14 @@
             [clj3manchess.engine.board :as b]))
 
 (t/deftest eval-death-rem-king-gray []
-  (t/is (:alive (eval-death (assoc st/newgame :board [::b/newgame {[0 12] nil}])))
-      #{:white :black}))
+  (t/is (= (:alive (eval-death (assoc st/newgame :board [::b/newgame {[0 12] nil}])))
+           #{:white :black})))
+
+(t/deftest amft-test []
+  (t/is (= (sut/testing-tostring-amft [0 0] 4)
+           "_X______X______X____X___
+X_______X_______X___X___
+________X________X__X__X
+________X_________XXXXX_
+________X_________XXXXX_
+XXXXXXXXXXXXXXXXXXXX_XXX")))
