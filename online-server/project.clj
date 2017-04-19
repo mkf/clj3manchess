@@ -8,4 +8,4 @@
                  [liberator "0.14.1"]
                  [compojure "1.5.2"]
                  [ring/ring-core "1.6.0-RC2"]
-                 [yesql "0.5.3"]])
+                 [com.layerware/hugsql "0.4.7"]])
