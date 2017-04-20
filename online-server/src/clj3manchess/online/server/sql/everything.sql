@@ -19,6 +19,27 @@ create table if not exists c3mst (
 select * from c3mst
 where id = :id
 
+-- :name insert-new-st! :i! :n
+insert into c3mst (board,
+                   moats,
+                   movesnext,
+                   castling,
+                   enpassant_prev,
+                   enpassant_last,
+                   halfmoveclock,
+                   fullmovenumber,
+                   alive)
+values (:board,
+        :moats,
+        :movesnext,
+        :castling,
+        :enpassant_prev,
+        :enpassant_last,
+        :halfmoveclock,
+        :fullmovenumber,
+        :alive)
+on duplicate key update id = last_insert_id(id);
+
 -- :name create-gp-table :! :raw
 create table if not exists c3mgp (
        id bigint auto_increment primary key,
@@ -38,32 +59,8 @@ select gp.id as id, gp.created, gp.state,
 from c3mgp gp
 join c3mst st on st.id = gp.state;
 
--- :name insert-just-new-gp! :! :1
-insert into c3mgp (state) values(:state) returning id;
-
--- :name insert-new-gp! :! :1
-begin;
-insert into c3mst (board,
-                   moats,
-                   movesnext,
-                   castling,
-                   enpassant_prev,
-                   enpassant_last,
-                   halfmoveclock,
-                   fullmovenumber,
-                   alive)
-values (unhex(:board),
-        :moats,
-        :movesnext,
-        :castling,
-        :enpassant_prev,
-        :enpassant_last,
-        :halfmoveclock,
-        :fullmovenumber,
-        :alive)
-on duplicate key update id=last_insert_id(id);
-insert into c3mgp (state) values(last_insert_id()) returning id;
-commit;
+-- :name insert-new-gp! :i! :n
+insert into c3mgp (state) values(:state);
 
 -- :name create-mv-table :! :raw
 create table if not exists c3mmv (
@@ -71,8 +68,9 @@ create table if not exists c3mmv (
        fromto binary(4) not null,
        promotion tinyint,
        beforegame bigint not null,
-       aftergame bigint, --not null
-       -- who
+       aftergame bigint,--not null,
+       -- who,
+       constraint foreign key (beforegame) references c3mgp (id) on update restrict
 ) ENGINE = InnoDB;
 
 -- :name get-mv-by-id-with-after :! :1
@@ -91,31 +89,6 @@ left join c3mgp af on mv.aftergame = be.id
 join c3mst bs on be.state = bs.id
 left join c3mst sa on af.state = sa.id;
 
--- :name insert-just-new-move :! :1
+-- :name insert-new-move :i! :n
 insert into c3mmv (fromto, promotion, beforegame, aftergame)
-values (:fromto, :prom, :beforegame, :aftergame) returning id;
-
--- :name insert-new-move! :! :1
-begin;
-insert into c3mst (board,
-                   moats,
-                   movesnext,
-                   castling,
-                   enpassant_prev,
-                   enpassant_last,
-                   halfmoveclock,
-                   fullmovenumber,
-                   alive)
-values (unhex(:board),
-        :moats,
-        :movesnext,
-        :castling,
-        :enpassant_prev,
-        :enpassant_last,
-        :halfmoveclock,
-        :fullmovenumber,
-        :alive)
-on duplicate key update id=last_insert_id(id);
-insert into c3mgp (state) values(last_insert_id());
-insert into c3mmv (fromto, promotion, beforegame, aftergame)
-values (:fromto, :prom, :beforegame, last_insert_id()) returning id;
+values (:fromto, :prom, :beforegame, :aftergame);
