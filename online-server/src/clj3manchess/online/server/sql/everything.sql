@@ -2,20 +2,20 @@
 create table if not exists c3mst (
        id bigint auto_increment primary key,
        board binary(144) not null,
-       moats tinyint not null, -- _ _ _ _ _ W G B
-       movesnext tinyint not null, -- w1 g2 b3
-       castling tinyint not null, -- _ _ WK WQ GK GQ BK BQ
+       moats set('w', 'g', 'b') not null, -- _ _ _ _ _ W G B
+       movesnext enum('w', 'g', 'b') not null, -- w1 g2 b3
+       castling set('wk', 'wq', 'gk', 'gq', 'bk', 'bq') not null, -- _ _ WK WQ GK GQ BK BQ
        enpassant_prev tinyint,
        enpassant_last tinyint,
        halfmoveclock tinyint not null,
        fullmovenumber smallint not null,
-       alive tinyint not null, -- _ _ _ _ _ W G B
+       alive set('w', 'g', 'b') not null, -- _ _ _ _ _ W G B
        constraint everything unique (
                   board, moats, movesnext, castling, enpassant_prev, enpassant_last, halfmoveclock, fullmovenumber, alive
        )
 ) ENGINE = InnoDB;
 
--- :name get-state-by-id :? :1
+-- :name get-st-by-id :? :1
 select * from c3mst
 where id = :id
 
@@ -66,7 +66,7 @@ insert into c3mgp (state) values(:state);
 create table if not exists c3mmv (
        id bigint auto_increment primary key,
        fromto binary(4) not null,
-       promotion tinyint,
+       promotion enum('q', 'b', 'n', 'r'),
        beforegame bigint not null,
        aftergame bigint,--not null,
        -- who,
@@ -89,6 +89,6 @@ left join c3mgp af on mv.aftergame = be.id
 join c3mst bs on be.state = bs.id
 left join c3mst sa on af.state = sa.id;
 
--- :name insert-new-move :i! :n
+-- :name insert-new-mv :i! :n
 insert into c3mmv (fromto, promotion, beforegame, aftergame)
 values (:fromto, :prom, :beforegame, :aftergame);
