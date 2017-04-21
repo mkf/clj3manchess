@@ -29,13 +29,16 @@
 (defapi app
   (context "/api" []
     :tags ["api"]
+    (GET "/game/:id/after" [id]
+      (ok (d/get-just-moves-by-before (intpars id))))
     (POST "/game/:id" [id]
       :body [ftp Desc]
       :return {(s/required-key :id) s/Int}
-      (ok {:id (d/insert-just-move!
-                (let [ftp (assoc ftp :beforegame id)
-                      agame (aftergame ftp)]
-                  (assoc ftp :aftergame (aftergame ftp))))}))
+      (ok (let [id (intpars id)]
+            {:id (d/insert-just-move!
+                  (let [ftp (assoc ftp :beforegame id)
+                        agame (aftergame ftp)]
+                    (assoc ftp :aftergame (aftergame ftp))))})))
     (GET "/move/:id" [id]
       (ok (d/get-just-move-by-id (intpars id))))
     (GET "/game/:id" [id]

@@ -75,9 +75,12 @@
                               :prom (when-not (nil? prom) (str (f/figtypechars prom)))
                               :beforegame beforegame
                               :aftergame aftergame})])))
+(defn mv-to-move [{:keys [fromto prom beforegame aftergame] :as mv}]
+  (when mv (let [fromto (vec fromto)
+                 [from to] (map vec (partition 2 fromto))
+                 promotion (when-not (nil? prom) (f/figtypebychar prom))]
+             {:from from :to to :promotion promotion :beforegame beforegame :aftergame aftergame})))
 (defn get-just-move-by-id [id]
-  (when-let [{:keys [fromto prom beforegame aftergame] :as mv} (get-just-mv-by-id db {:id id})]
-    (let [fromto (vec fromto)
-          [from to] (map vec (partition 2 fromto))
-          promotion (when-not (nil? prom) (f/figtypebychar prom))]
-      {:from from :to to :promotion promotion :beforegame beforegame :aftergame aftergame})))
+  (mv-to-move (get-just-mv-by-id db {:id id})))
+(defn get-just-moves-by-before [id]
+  (keep mv-to-move (get-just-mvs-by-before db {:id id})))

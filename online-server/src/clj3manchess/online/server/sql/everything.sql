@@ -74,7 +74,10 @@ create table if not exists c3mmv (
 ) ENGINE = InnoDB;
 
 -- :name get-just-mv-by-id :? :1
-select * from c3mmv where id = :id
+select * from c3mmv where id = :id;
+
+-- :name get-just-mvs-by-before :?
+select * from c3mmv where beforegame = :id;
 
 -- :name get-mv-by-id-with-after :! :1
 select mv.id, mv.fromto, mv.promotion, mv.beforegame, mv.aftergame,
