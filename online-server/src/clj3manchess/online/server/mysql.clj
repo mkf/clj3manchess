@@ -68,11 +68,11 @@
   (:generated_key
    (into {}
          [(insert-new-gp! db {:state (insert-state! state)})])))
-(defn insert-just-move! [{:keys [from to promotion beforegame aftergame]}]
+(defn insert-just-move! [{:keys [from to prom beforegame aftergame]}]
   (:generated_key
    (into {}
          [(insert-new-mv! db {:fromto (byte-array 4 [(rank from) (file from) (rank to) (file to)])
-                              :prom (when-not (nil? promotion) (str (f/figtypechars promotion)))
+                              :prom (when-not (nil? prom) (str (f/figtypechars prom)))
                               :beforegame beforegame
                               :aftergame aftergame})])))
 (defn get-just-move-by-id [id]
