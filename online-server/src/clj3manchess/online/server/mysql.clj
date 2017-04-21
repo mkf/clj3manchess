@@ -4,7 +4,8 @@
             [clj3manchess.engine.color :as c]
             [clj3manchess.engine.castling :as ca]
             [clj3manchess.engine.state :as st]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clj-time.coerce :as tc]))
 
 (hugsql/def-db-fns "clj3manchess/online/server/sql/everything.sql")
 (hugsql/def-sqlvec-fns "clj3manchess/online/server/sql/everything.sql")
@@ -54,6 +55,13 @@
    :enpassant_last (:last en-passant)})
 (defn insert-state! [state]
   (:generated_key (into {}
-    [(insert-new-st!
-      db
-      (state-to-st state))])))
+                        [(insert-new-st!
+                          db
+                          (state-to-st state))])))
+(defn get-gameplay-by-id [id]
+  (when-let [{:keys [state created]} (get-just-gp-by-id db {:id id})]
+    (assoc (get-state-by-id state) :gp_id id :created (tc/from-sql-time created))))
+(defn insert-gameplay! [state]
+  (:generated_key
+   (into {}
+         [(insert-new-gp! db {:state (insert-state! state)})])))
