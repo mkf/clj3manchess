@@ -61,7 +61,7 @@
   (when (pos? src)
     (let [figtype (figtypebyidx (bit-and src 7))
           color (bit-and (bit-shift-right src 3) 7)
-          color (when (and (pos? color) (< color 3)) (nth c/colors color))
+          color (when (and (<= 0 color) (< color 3)) (nth c/colors color))
           pc (when (= figtype :pawn) (bit-test src 6))]
       (cond-> {:color color :type figtype}
         (not (nil? pc)) (assoc :crossed-center pc)))))
