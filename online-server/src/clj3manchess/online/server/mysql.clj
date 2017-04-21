@@ -78,6 +78,6 @@
 (defn get-just-move-by-id [id]
   (when-let [{:keys [fromto prom beforegame aftergame] :as mv} (get-just-mv-by-id db {:id id})]
     (let [fromto (vec fromto)
-          [from to] (partition 2 fromto)
+          [from to] (map vec (partition 2 fromto))
           promotion (when-not (nil? prom) (f/figtypebychar prom))]
       {:from from :to to :promotion promotion :beforegame beforegame :aftergame aftergame})))
