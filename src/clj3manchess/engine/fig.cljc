@@ -53,14 +53,14 @@
 (s/defn figtoint :- s/Int [fig :- (s/maybe Fig)]
   (if (nil? fig) 0
       (bit-or (figtypeidces (:type fig))
-              (bit-shift-left (c/idx (:color fig)) 3)
+              (bit-shift-left (c/segm (:color fig)) 3)
               (if (and (= (:type fig) :pawn)
-                       (:crossed-center fig))
+                       (true? (get fig :crossed-center)))
                 (bit-shift-left 1 6) 0))))
 (s/defn inttofig :- (s/maybe Fig) [src :- (s/maybe s/Int)]
   (when (pos? src)
     (let [figtype (figtypebyidx (bit-and src 7))
-          color (nth c/colors-w-nil (bit-and (bit-shift-right src 3) 7))
+          color (nth c/colors (bit-and (bit-shift-right src 3) 7))
           pc (when (= figtype :pawn) (bit-test src 6))]
       (cond-> {:color color :type figtype}
         (not (nil? pc)) (assoc :crossed-center pc)))))

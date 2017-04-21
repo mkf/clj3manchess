@@ -133,7 +133,11 @@
   [b :- Board , w :- [Pos]] (every? true? (map nil? (map #(getb b %) w))))
 
 (s/defn squares-array :- [Square] [b :- Board]
-  (concat (fill-array-board b)))
+  (apply concat (fill-array-board b)))
 (s/defn sqint-array :- [s/Int] [b :- Board]
   (map f/figtoint (squares-array b)))
-(defonce ngsia (sqint-array ::newgame))
+;;(def ngsiaa (sqint-array ::newgame))
+;;ngsiaa
+(s/defn board-from-sqint :- ArrayBoard [sr :- [s/Int]]
+  (partition 24 (map f/inttofig sr)))
+;;(board-from-sqint ngsiaa)
