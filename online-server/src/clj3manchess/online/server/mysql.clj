@@ -32,7 +32,7 @@
                                               alive enpassant_prev enpassant_last]
                                        :as fromdb} (get-st-by-id db {:id id})]
                              {:board (b/board-from-sqint (vec board))
-                              :movesnext (c/charcol movesnext)
+                              :moves-next (c/charcol movesnext)
                               :id id
                               :moats (stringset-to-set-of-colors moats)
                               :castling (set (ca/charsetcastposset castling))
@@ -41,17 +41,19 @@
                               :en-passant {:prev enpassant_prev
                                            :last enpassant_last}
                               :alive (stringset-to-set-of-colors alive)}))
-(defn insert-state-by-id! [{:keys [board movesnext moats castling fullmovenumber halfmoveclock alive en-passant]
-                            :as state}]
+(defn state-to-st [{:keys [board moves-next moats castling fullmovenumber halfmoveclock alive en-passant]
+                    :as state}]
+  {:board (byte-array 144 (b/sqint-array board))
+   :movesnext (str (c/colchar moves-next))
+   :moats (set-of-colors-to-stringset moats)
+   :castling (ca/castpossetstr castling)
+   :fullmovenumber fullmovenumber
+   :halfmoveclock halfmoveclock
+   :alive (set-of-colors-to-stringset alive)
+   :enpassant_prev (:prev en-passant)
+   :enpassant_last (:last en-passant)})
+(defn insert-state-by-id! [state]
   (:generated-keys
    (insert-new-st!
     db
-    {:board (byte-array 144 (b/sqint-array board))
-     :movesnext (c/colchar movesnext)
-     :moats (set-of-colors-to-stringset moats)
-     :castling (ca/castpossetstr castling)
-     :fullmovenumber fullmovenumber
-     :halfmoveclock halfmoveclock
-     :alive (set-of-colors-to-stringset alive)
-     :enpassant_prev (:prev en-passant)
-     :enpassant_last (:last en-passant)})))
+    (state-to-st state))))
