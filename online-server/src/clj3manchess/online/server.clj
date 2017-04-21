@@ -26,6 +26,8 @@
                 (ok (d/get-just-move-by-id (intpars id))))
            (GET "/game/:id" [id]
                  (ok (d/get-gameplay-by-id (intpars id))))
+           (GET "/newgame" []
+                (ok {:id (d/insert-gameplay! st/newgame)}))
            (GET "/state/:id" [id]
                 :return StateWithID
                 (ok (d/get-state-by-id (intpars id))))))
