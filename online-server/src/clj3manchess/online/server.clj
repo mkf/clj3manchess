@@ -18,12 +18,17 @@
 ;;   (context "/api" []
 ;;            (defroutes api-routes
 ;;              (ANY ["/state/:id{[0-9]+}"] [id] (state-resource id)))))
+(defn intpars [id] (if-not (string? id) id (Integer/parseInt id)))
 (defapi app
   (context "/api" []
            :tags ["api"]
+           (GET "/move/:id" [id]
+                (ok (d/get-just-move-by-id (intpars id))))
+           (GET "/game/:id" [id]
+                 (ok (d/get-gameplay-by-id (intpars id))))
            (GET "/state/:id" [id]
                 :return StateWithID
-                (ok (d/get-state-by-id (if-not (string? id) id (Integer/parseInt id)))))))
+                (ok (d/get-state-by-id (intpars id))))))
 
 (def handler app)
 
