@@ -29,13 +29,14 @@
 (defn stringset-to-set-of-colors [string] (->> string
                                                (partition-by #{\,})
                                                (filter #(not= \, (first %)))
+                                               (map first)
                                                (map c/charcol)
                                                set))
 (defn get-state-by-id [id] (when-let [{:keys [board movesnext moats castling fullmovenumber halfmoveclock
                                               alive enpassant_prev enpassant_last]
                                        :as fromdb} (get-st-by-id db {:id id})]
                              {:board (b/board-from-sqint (vec board))
-                              :moves-next (c/charcol movesnext)
+                              :moves-next (c/charcol (first movesnext))
                               :id id
                               :moats (stringset-to-set-of-colors moats)
                               :castling (set (ca/charsetcastposset castling))
