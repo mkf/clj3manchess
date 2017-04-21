@@ -73,6 +73,9 @@ create table if not exists c3mmv (
        constraint foreign key (beforegame) references c3mgp (id) on update restrict
 ) ENGINE = InnoDB;
 
+-- :name get-just-mv-by-id :? :1
+select * from c3mmv where id = :id
+
 -- :name get-mv-by-id-with-after :! :1
 select mv.id, mv.fromto, mv.promotion, mv.beforegame, mv.aftergame,
        be.created as b_created, be.state as b_state,
