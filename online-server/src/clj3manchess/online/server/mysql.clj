@@ -52,7 +52,7 @@
    :alive (set-of-colors-to-stringset alive)
    :enpassant_prev (:prev en-passant)
    :enpassant_last (:last en-passant)})
-(defn insert-state-by-id! [state]
+(defn insert-state! [state]
   (:generated_key (into {}
     [(insert-new-st!
       db
