@@ -5,6 +5,7 @@
             [clj3manchess.engine.castling :as ca]
             [clj3manchess.engine.state :as st]
             [clj3manchess.engine.fig :as f]
+            [clj3manchess.engine.pos :as p :refer [rank file]]
             [clojure.string :as str]
             [clj-time.coerce :as tc]))
 
