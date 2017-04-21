@@ -24,11 +24,11 @@
 
 (def Desc {(s/required-key :from) p/Pos
            (s/required-key :to) p/Pos
-           (s/optional-key :prom) f/PromFigType})
+           (s/optional-key :prom) (s/maybe f/PromFigType)})
 
 (def DescMove {(s/required-key :from) p/Pos
                (s/required-key :to) p/Pos
-               (s/optional-key :prom) f/PromFigType
+               (s/optional-key :prom) (s/maybe f/PromFigType)
                (s/required-key :before) st/State})
 
 (def Move (s/either DescMove VecMove))
@@ -186,7 +186,7 @@
         {:keys [moats board alive]} before
         condit                      (and (not (v/is-castvec? vec))
                                          (or (not= (:type (b/getb board from)) :pawn)
-                                             (contains? vec :prom)))]
+                                             (not (nil? (:prom vec)))))]
     (if-not condit moats
             (loop [res moats, left c/colors]
               (if (empty? left) res
@@ -427,3 +427,6 @@
                                   (map after)))
 (defn generate-afters-set [ftp] (set (generate-afters-seq ftp)))
 (defn generate-afters-map [ftp] (into {} (generate-afters-mapentries ftp)))
+(defn after-of-afters [ftp] (let [settt (generate-afters-set ftp)
+                                  sett (filter #(not (contains? impossibilities %)) settt)
+                                  _ (if (not= (count sett) 1) (println sett settt))] (first sett)))
