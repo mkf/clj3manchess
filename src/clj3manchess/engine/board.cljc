@@ -139,5 +139,9 @@
 ;;(def ngsiaa (sqint-array ::newgame))
 ;;ngsiaa
 (s/defn board-from-sqint :- ArrayBoard [sr :- [s/Int]]
-  (partition 24 (map f/inttofig sr)))
+  (->> sr
+       (map f/inttofig)
+       (partition 24)
+       (map vec)
+       vec))
 ;;(board-from-sqint ngsiaa)
