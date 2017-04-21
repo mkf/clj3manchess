@@ -5,7 +5,8 @@
             [schema.core :as s]
             [clj3manchess.engine.state :as st]
             [ring.util.http-response :refer :all]
-            [clj3manchess.online.server.mysql :as d]))
+            [clj3manchess.online.server.mysql :as d]
+            [clj3manchess.online.core :refer [StateWithID]]))
 
 ;; (defresource state-resource [id]
 ;;   :allowed-methods [:get]
@@ -17,13 +18,12 @@
 ;;   (context "/api" []
 ;;            (defroutes api-routes
 ;;              (ANY ["/state/:id{[0-9]+}"] [id] (state-resource id)))))
-(def StateWithID (assoc st/State (s/required-key :id) s/Int))
 (defapi app
   (context "/api" []
            :tags ["api"]
            (GET "/state/:id" [id]
-                :return {:result StateWithID}
-                (ok {:result (d/get-state-by-id id)}))))
+                :return StateWithID
+                (ok (d/get-state-by-id (if-not (string? id) id (Integer/parseInt id)))))))
 
 (def handler app)
 
