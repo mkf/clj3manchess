@@ -35,7 +35,7 @@
   ([pos :- Pos] (case (rank pos)
                   0 {:type  (get newgame-zero-rank-segm (mod (file pos) 8))
                      :color (p/color-segm pos)}
-                  1 {:type :pawn :color (p/color-segm pos) :crossedCenter false}
+                  1 {:type :pawn :color (p/color-segm pos) :crossed-center false}
                   nil)))
 
 (s/defn get-from-abs-board :- Square [b :- AbsBoard, pos :- Pos]
@@ -131,3 +131,9 @@
 
 (s/defn check-empties :- s/Bool
   [b :- Board , w :- [Pos]] (every? true? (map nil? (map #(getb b %) w))))
+
+(s/defn squares-array :- [Square] [b :- Board]
+  (concat (fill-array-board b)))
+(s/defn sqint-array :- [s/Int] [b :- Board]
+  (map f/figtoint (squares-array b)))
+(defonce ngsia (sqint-array ::newgame))

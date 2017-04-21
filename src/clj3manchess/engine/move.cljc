@@ -118,11 +118,11 @@
             (v/is-diagvec? (:vec m)) (unbridged (v/moat-diag-vec (:from m) (to m) (:plusfile (:vec m))))
             (v/is-knights? (:vec m)) (unbridged (v/moat-knight-vec (:from m) (to m))))) :passing-unbridged-moats
     ;(= (:type (get-bef-sq m (:from m))) :pawn) (if-not (:inward (:vec m))
-    ;                                             (if-not (:crossedCenter (get-bef-sq m (:from m)))
+    ;                                             (if-not (:crossed-center (get-bef-sq m (:from m)))
     ;                                               :wrong-pawn-direction
     ;                                               (if )))
     (and (= (:type (get-bef-sq m (:from m))) :pawn)
-         (= (:inward (:vec m)) (:crossedCenter (get-bef-sq m (:from m))))) :wrong-pawn-direction
+         (= (:inward (:vec m)) (:crossed-center (get-bef-sq m (:from m))))) :wrong-pawn-direction
     (and (= (:type (get-bef-sq m (:from m))) :pawn)
          (= (p/rank (to m)) 5)
          (not (f/promfigtypes (:prom (:vec m))))) :no-promotion

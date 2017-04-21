@@ -1,8 +1,10 @@
 (ns clj3manchess.engine.color
-  (:require [schema.core :as s :include-macros true]))
+  (:require [schema.core :as s :include-macros true]
+            [clojure.set :as set]))
 
 (def Color (s/enum :white :gray :black))
 (def colors [:white :gray :black])
+(def colors-w-nil [nil :white :gray :black])
 (def ColorSegm (s/enum 0 1 2))
 (def ColorIdx (s/enum 1 2 3))
 
@@ -20,3 +22,5 @@
                                                :white :black
                                                :gray  :white
                                                :black :gray))
+(def colchar {:white \w :gray \g :black \b})
+(def charcol (set/map-invert colchar))
