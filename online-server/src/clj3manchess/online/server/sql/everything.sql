@@ -89,6 +89,6 @@ left join c3mgp af on mv.aftergame = be.id
 join c3mst bs on be.state = bs.id
 left join c3mst sa on af.state = sa.id;
 
--- :name insert-new-mv :i! :n
+-- :name insert-new-mv! :i! :n
 insert into c3mmv (fromto, promotion, beforegame, aftergame)
 values (:fromto, :prom, :beforegame, :aftergame);

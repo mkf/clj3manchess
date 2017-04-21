@@ -4,6 +4,7 @@
             [clj3manchess.engine.color :as c]
             [clj3manchess.engine.castling :as ca]
             [clj3manchess.engine.state :as st]
+            [clj3manchess.engine.fig :as f]
             [clojure.string :as str]
             [clj-time.coerce :as tc]))
 
@@ -65,3 +66,10 @@
   (:generated_key
    (into {}
          [(insert-new-gp! db {:state (insert-state! state)})])))
+(defn insert-just-move! [{:keys [from to promotion beforegame aftergame]}]
+  (:generated_key
+   (into {}
+         [(insert-new-mv! db {:fromto (byte-array 4 [(rank from) (file from) (rank to) (file to)])
+                              :prom (when-not (nil? promotion) (str (f/figtypechars promotion)))
+                              :beforegame beforegame
+                              :aftergame aftergame})])))
