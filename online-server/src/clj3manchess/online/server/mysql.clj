@@ -53,7 +53,7 @@
    :enpassant_prev (:prev en-passant)
    :enpassant_last (:last en-passant)})
 (defn insert-state-by-id! [state]
-  (:generated-keys
-   (insert-new-st!
-    db
-    (state-to-st state))))
+  (:generated_key (into {}
+    [(insert-new-st!
+      db
+      (state-to-st state))])))
