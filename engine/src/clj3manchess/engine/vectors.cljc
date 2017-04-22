@@ -194,9 +194,10 @@
   (sc/valid? ::pawnlongjump vec))
 
 (s/defn type-of-cont-vec :- (s/enum :rankvec :filevec :diagvec)
-  ([vec :- ContVecNoProm] (cond (is-rankvec? vec) :rankvec
-                                (is-filevec? vec) :filevec
-                                (is-diagvec? vec) :diagvec))
+  ([vec :- ContVecNoProm] ;; (cond (is-rankvec? vec) :rankvec
+                          ;;       (is-filevec? vec) :filevec
+                          ;;       (is-diagvec? vec) :diagvec)
+   (key (sc/conform (sc/or :rankvec ::rank :filevec ::file :diagvec ::diag) vec)))
   ([vec :- ContVecNoProm, _] (type-of-cont-vec vec)))
 
 (s/defn thru-center-cont-vec? :- s/Bool
