@@ -31,10 +31,12 @@
                (s/optional-key :prom) (s/maybe f/PromFigType)
                (s/required-key :before) st/State})
 
-(def Move (s/either DescMove VecMove))
+(def Move (s/conditional #(contains? % :to) DescMove
+                         #(contains? % :vec) VecMove))
 
 (s/defn to :- p/Pos [move :- Move]
-  (if (contains? move :to) (:to move) (v/bv-to (dissoc move :before))))
+  (if (and (not (contains? move :vec))
+           (contains? move :to)) (:to move) (v/bv-to (dissoc move :before))))
 
 (s/defn get-bef-sq :- b/Square [move :- Move, where :- p/Pos]
   (b/getb (:board (:before move)) where))
@@ -269,7 +271,8 @@
   (if (v/is-pawnlongjumpvec? vec)
     (after-en-passant-something ep (p/file from))
     (after-en-passant-nothing ep)))
-(s/defn after-sans-eval-death-and-check :- (s/either st/State Impossibility)
+(def StateOrImpossibility (s/conditional keyword? Impossibility :else st/State))
+(s/defn after-sans-eval-death-and-check :- StateOrImpossibility
   [{vec :vec
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
@@ -366,7 +369,7 @@
 (s/defn check-checking :- [p/Pos] [board :- b/Board, who :- c/Color, alive :- st/Alive]
   (when (alive who) (if-let [king-pos (b/where-is-king board who)]
                       (threat-checking board king-pos alive {}))))
-(s/defn after-sans-eval-death :- (s/either st/State Impossibility)
+(s/defn after-sans-eval-death :- StateOrImpossibility
   [{vec :vec
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
