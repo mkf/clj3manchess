@@ -9,6 +9,7 @@
                  [metosin/compojure-api "1.1.10"]
                  [ring/ring-core "1.6.0-RC2"]
                  [com.layerware/hugsql "0.4.7"]
+                 [ring-cors "0.1.10"]
                  [mysql/mysql-connector-java "5.1.39"]
                  [prismatic/schema "1.1.5"]]
   :profiles {:uberjar {:aot :all}

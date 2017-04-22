@@ -67,7 +67,7 @@
           (ok res) (not-found {:id id}))))))
 
 (def handler (wrap-cors app
-                        :access-control-allow-origin [#"*"]
+                        :access-control-allow-origin "*"
                         :access-control-allow-methods [:get :post]))
 
 (defn init [] (do (d/create-tables)))
