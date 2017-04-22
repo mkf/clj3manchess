@@ -21,3 +21,8 @@ XXXXXXXXXXXXXXXXXXXX_XXX")))
 (t/deftest knight-capturing-thru-moat-newgame []
   (t/is (= (sut/after-of-afters {:before st/newgame :from [0 1] :to [1 23]})
            :capturing-thru-moats)))
+(t/deftest nothing-to-move-there []
+  (doseq [from [[2 0] [3 4] [2 23] [3 5] [5 5]]
+          to [[0 0] [1 0] [1 23] [0 23] [2 1] [3 5] [2 22] [3 22] [4 5] [3 4] [5 4]]]
+    (t/is (= (sut/after-of-afters {:before st/newgame :from from :to to})
+             :nothing-to-move-here))))

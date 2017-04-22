@@ -281,23 +281,23 @@
     impos
     (if-let [to (v/addvec vec from)]
       (let [what (b/getb board from)
-           tosq (b/getb board to)
-           whatype (:type what)
-           new-board (asedac-new-board vec board moves-next whatype from to en-passant)
-           new-en-passant (after-en-passant en-passant vec from)]
-       (if (are-we-initiating-a-check-thru-moat vec from to moves-next alive new-en-passant new-board)
-         :initiating-check-thru-moats
-         (let [nxtcolmvs (c/next-col moves-next)
-               prvcolmvs (c/prev-col moves-next)]
-           {:board new-board
-            :moats (after-moats-state m new-board)
-            :moves-next (if (alive nxtcolmvs) nxtcolmvs prvcolmvs)
-            :castling (after-castling castling moves-next whatype from to)
-            :en-passant new-en-passant
-            :halfmoveclock (if (or (= whatype :pawn)
-                                   (not (nil? tosq))) 0 (inc halfmoveclock))
-            :fullmovenumber (inc fullmovenumber)
-            :alive alive}))) (println vec from))))
+            tosq (b/getb board to)
+            whatype (:type what)
+            new-board (asedac-new-board vec board moves-next whatype from to en-passant)
+            new-en-passant (after-en-passant en-passant vec from)]
+        (if (are-we-initiating-a-check-thru-moat vec from to moves-next alive new-en-passant new-board)
+          :initiating-check-thru-moats
+          (let [nxtcolmvs (c/next-col moves-next)
+                prvcolmvs (c/prev-col moves-next)]
+            {:board new-board
+             :moats (after-moats-state m new-board)
+             :moves-next (if (alive nxtcolmvs) nxtcolmvs prvcolmvs)
+             :castling (after-castling castling moves-next whatype from to)
+             :en-passant new-en-passant
+             :halfmoveclock (if (or (= whatype :pawn)
+                                    (not (nil? tosq))) 0 (inc halfmoveclock))
+             :fullmovenumber (inc fullmovenumber)
+             :alive alive}))) (println vec from))))
 
 (defonce AMFT (->> p/all-pos
                    (map (fn [from] [from (->> p/all-pos
@@ -410,8 +410,8 @@
                   we (c/prev-col moves-next)]
               (if-not (empty? (check-checking board we alive)) :we-in-check
                       (eval-death sans-check))))))
-(defn generate-vecs ; :- #{BoundVec}
-  ([figtype ;;:- f/FigType
+(s/defn generate-vecs ; :- #{BoundVec}
+  ([figtype :- f/FigType
     {:keys [from prom] [rank-to :as to] :to :as ftp}] ;;:- (s/either Desc DescMove)]
    (->> ((v/vecft (v/tvec figtype)) from to)
         (#(cond (nil? %) #{} (or (= :pawnlongjump %) (map? %)) #{%} :else %))
@@ -422,22 +422,30 @@
         (map #(assoc ftp :vec %))
         set))
   ([{:keys [from before] :as ftp}] ;;:- DescMove]
-   (-> ftp
-       (get-bef-sq from)
-       :type
-       (generate-vecs ftp)
-       set)))
+   (if-let [ftb (get-bef-sq ftp from)]
+     (-> ftb
+         :type
+         (generate-vecs ftp)
+         set)
+     :nothing-to-move-here)))
 
 (defn generate-afters-mapentries ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
-  [{before :before :as ftp}] (->> ftp
-                                  generate-vecs
-                                  (map (fn [x] [x (after x)]))))
+  [{before :before :as ftp}] (let [vcs (generate-vecs ftp)]
+                               (if (keyword? vcs) vcs
+                                   (->> vcs
+                                        (filter #(not (impossibilities %)))
+                                        (map (fn [x] [x (after x)]))))))
 (defn generate-afters-seq
-  [{before :before :as ftp}] (->> ftp
-                                  generate-vecs
-                                  (map after)))
-(defn generate-afters-set [ftp] (set (generate-afters-seq ftp)))
-(defn generate-afters-map [ftp] (into {} (generate-afters-mapentries ftp)))
-(defn after-of-afters [ftp] (let [settt (generate-afters-set ftp)
-                                  sett (filter #(not (contains? impossibilities %)) settt)
-                                  _ (if (not= (count sett) 1) (println sett settt))] (first sett)))
+  [{before :before :as ftp}] (let [vcs (generate-vecs ftp)]
+                               (if (keyword? vcs) vcs
+                                   (->> vcs
+                                        (filter #(not (impossibilities %)))
+                                        (map after)))))
+(defn generate-afters-set [ftp] (let [afcs (generate-afters-seq ftp)]
+                                  (if (keyword? afcs) afcs (set afcs))))
+(defn generate-afters-map [ftp] (let [afcs (generate-afters-mapentries ftp)]
+                                  (if (keyword? afcs) afcs (into {} afcs))))
+(defn after-of-afters [ftp] (let [settt (generate-afters-set ftp)]
+                              (if (keyword? settt) settt
+                                  (let [sett (filter #(not (contains? impossibilities %)) settt)
+                                        _ (if (not= (count sett) 1) (println sett settt))] (first sett)))))
