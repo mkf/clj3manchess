@@ -201,12 +201,16 @@
   ([vec :- ContVecNoProm, _] (type-of-cont-vec vec)))
 
 (s/defn thru-center-cont-vec? :- s/Bool
-  ([inward :- s/Bool, abs :- FileAbs, from-rank :- Rank]
+  ([inward :- (s/maybe s/Bool), abs :- FileAbs, from-rank :- Rank]
    (and (not (nil? inward))
         (let [abs (one-if-nil-else-input abs)]
           (and inward (> (+ abs from-rank) 5)))))
   ([vec :- ContVec, from-rank :- Rank]
    (thru-center-cont-vec? (:inward vec) (:abs vec) from-rank)))
+(sc/fdef thru-center-cont-vec?
+         :args (sc/or :destructured (sc/cat :inward ::inward :abs ::abs :from-rank ::p/rank)
+                      :structured (sc/cat :vec ::cont :from-rank ::p/rank))
+         :ret boolean?)
 
 (s/defn ranks-inward-to-pass-center :- (s/enum 1 2 3 4 5 6)
   [from-rank :- Rank] (inc (- 5 from-rank)))
