@@ -25,17 +25,17 @@
 ;;(def PawnLongJumpVec (s/eq :pawnlongjumpvec))
 (def PawnLongJumpVec {(s/required-key :pawnlongjump) (s/eq true)})
 (defn bno [nono] (identity #(or (not (contains? % nono))
-                       (nil? (nono %)))))
+                                (nil? (nono %)))))
 (sc/def ::pawnlongjump (sc/and (sc/keys :req-un [::pawnlongjump])
-                                  (bno :abs) (bno :inward) (bno :plusfile) (bno :centeronecloser) (bno :prom)
-                                  #(true? (:pawnlongjump %)) (bno :castling)))
+                               (bno :abs) (bno :inward) (bno :plusfile) (bno :centeronecloser) (bno :prom)
+                               #(true? (:pawnlongjump %)) (bno :castling)))
 (derive ::knightvectype ::jumpvectype)
 (def KnightVec {(s/required-key :plusfile)        s/Bool
                 (s/required-key :inward)          s/Bool
                 (s/required-key :centeronecloser) s/Bool})
 (sc/def ::knight (sc/and (sc/keys :req-un [::inward ::plusfile ::centeronecloser])
-                            (bno :abs) (bno :pawnlongjump) (bno :prom) (bno :castling)
-                            #(boolean? (:inward %)) #(boolean? (:plusfile %)) #(boolean? (:centeronecloser %))))
+                         (bno :abs) (bno :pawnlongjump) (bno :prom) (bno :castling)
+                         #(boolean? (:inward %)) #(boolean? (:plusfile %)) #(boolean? (:centeronecloser %))))
 (derive ::continuousvectype ::vectype)
 (derive ::nopromcontinuousvectype ::continuousvectype)
 (derive ::multicontinuousvectype ::nopromcontinuousvectype)
@@ -52,8 +52,8 @@
 (def FileVec {(s/required-key :plusfile) s/Bool
               (s/optional-key :abs)      FileAbs})
 (sc/def ::file (sc/and (sc/keys :req-un [::plusfile] :opt-un [::abs])
-                          (bno :inward) (bno :centeronecloser) (bno :pawnlongjump) (bno :prom)
-                          #(boolean? (:plusfile %)) (bno :castling)))
+                       (bno :inward) (bno :centeronecloser) (bno :pawnlongjump) (bno :prom)
+                       #(boolean? (:plusfile %)) (bno :castling)))
 (derive ::rankvectype ::axisvectype)
 (derive ::nopromrankvectype ::rankvectype)
 (derive ::nopromrankvectype ::nopromaxisvectype)
@@ -66,8 +66,8 @@
 (defn one-if-prom [x] (not (and (contains? x :prom) (not (nil? (:prom x))) (not (one-just-abs x)))))
 (sc/def ::prom (sc/nilable f/promfigtypes))
 (sc/def ::rank (sc/and (sc/keys :req-un [::inward] :opt-un [::abs ::prom])
-                          (bno :plusfile) (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
-                          rank-friendly-abs #(boolean? (:inward %)) one-if-prom))
+                       (bno :plusfile) (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
+                       rank-friendly-abs #(boolean? (:inward %)) one-if-prom))
 (derive ::diagvectype ::continuousvectype)
 (derive ::nopromdiagvectype ::diagvectype)
 (derive ::nopromdiagvectype ::nopromcontinuousvectype)
@@ -77,14 +77,14 @@
               (s/required-key :inward)   s/Bool
               (s/optional-key :abs)      RankAbs})
 (sc/def ::diag (sc/and (sc/keys :req-un [::inward ::plusfile] :opt-un [::abs ::prom])
-                          (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
-                          rank-friendly-abs #(boolean? (:inward %)) #(boolean? (:plusfile %)) one-if-prom))
+                       (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
+                       rank-friendly-abs #(boolean? (:inward %)) #(boolean? (:plusfile %)) one-if-prom))
 (sc/def ::filediag (sc/and (sc/keys :req-un [::plusfile] :opt-un [::abs ::prom ::inward])
-                              (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
-                              #(or ((bno :inward) %) (rank-friendly-abs %)) #(boolean? (:plusfile %)) one-if-prom))
+                           (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
+                           #(or ((bno :inward) %) (rank-friendly-abs %)) #(boolean? (:plusfile %)) one-if-prom))
 (sc/def ::rankdiag (sc/and (sc/keys :req-un [::inward] :opt-un [::abs ::prom ::plusfile])
-                              (bno :centeronecloser) (bno :pawnlongjump) rank-friendly-abs one-if-prom
-                              #(boolean? (:inward %)) (bno :castling)))
+                           (bno :centeronecloser) (bno :pawnlongjump) rank-friendly-abs one-if-prom
+                           #(boolean? (:inward %)) (bno :castling)))
 (def AxisVec (s/conditional #(contains? % :plusfile) FileVec #(contains? % :inward) RankVec))
 (sc/def ::axis (sc/or :rank ::rank :file ::file))
 (def Prom (s/enum :queen :rook :bishop :knight))
@@ -100,26 +100,26 @@
 (def PawnWalkVec {(s/required-key :inward) s/Bool
                   (s/optional-key :prom)   Prom})
 (sc/def ::pawnwalk (sc/and (sc/keys :req-un [::inward] :opt-un [::prom ::abs])
-                              (bno :plusfile) (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
-                              one-just-abs #(boolean? (:inward %))))
+                           (bno :plusfile) (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
+                           one-just-abs #(boolean? (:inward %))))
 (def RankOrPawnWalkVec (s/conditional #(contains? % :abs) RankVec :else PawnWalkVec))
 (def PawnCapVec {(s/required-key :inward)   s/Bool
                  (s/required-key :plusfile) s/Bool
                  (s/optional-key :prom)     Prom})
 (sc/def ::pawncap (sc/and (sc/keys :req-un [::inward ::plusfile] :opt-un [::prom ::abs])
-                             (bno :centeronecloser) (bno :pawnlongjump) one-just-abs
-                             #(boolean? (:inward %)) #(boolean? (:plusfile %)) (bno :castling)))
+                          (bno :centeronecloser) (bno :pawnlongjump) one-just-abs
+                          #(boolean? (:inward %)) #(boolean? (:plusfile %)) (bno :castling)))
 (def DiagOrPawnCapVec (s/conditional #(contains? % :abs) DiagVec :else PawnCapVec))
 (def PawnContVec (s/conditional #(not (contains? % :plusfile)) PawnWalkVec :else PawnCapVec))
 (sc/def ::pawncont (sc/and (sc/keys :req-un [::inward] :opt-un [::prom ::abs ::plusfile])
-                              (bno :centeronecloser) (bno :pawnlongjump) one-just-abs #(boolean? (:inward %))
-                              (bno :castling)))
+                           (bno :centeronecloser) (bno :pawnlongjump) one-just-abs #(boolean? (:inward %))
+                           (bno :castling)))
 (def PawnPromVec (s/both PawnContVec {(s/required-key :inward) s/Bool
                                       (s/optional-key :plusfile) s/Bool
                                       (s/required-key :prom) Prom}))
 (sc/def ::pawnprom (sc/and (sc/keys :req-un [::inward ::prom] :opt-un [::abs ::plusfile])
-                              (bno :centeronecloser) (bno :pawnlongjump) (bno :castling) one-just-abs
-                              #(boolean? (:inward %)) #(not (nil? (:prom %)))))
+                           (bno :centeronecloser) (bno :pawnlongjump) (bno :castling) one-just-abs
+                           #(boolean? (:inward %)) #(not (nil? (:prom %)))))
 (def ContVecNoProm (s/conditional #(not (and (contains? % :inward)
                                              (contains? % :plusfile))) AxisVec :else DiagVec))
 (def ContVec (s/conditional #(or (contains? % :abs)
@@ -138,7 +138,7 @@
                                            (contains? % :plusfile))) KingAxisVec :else KingDiagVec))
 (def CastlingVec {(s/required-key :castling) CastlingType})
 (sc/def ::castling (sc/and (sc/keys :req-un [::cas/castling]) (bno :inward) (bno :prom) (bno :abs) (bno :plusfile)
-                              (bno :centeronecloser) (bno :pawnlongjump)))
+                           (bno :centeronecloser) (bno :pawnlongjump)))
 ;(def KingVec (s/both ContVecNoProm {(s/optional-key :inward) s/Bool
 ;                                    (s/optional-key :plusfile) s/Bool}))
 (def KingVec (s/conditional #(contains? % :castling) CastlingVec :else KingContVec))
@@ -214,6 +214,7 @@
 
 (s/defn ranks-inward-to-pass-center :- (s/enum 1 2 3 4 5 6)
   [from-rank :- Rank] (inc (- 5 from-rank)))
+(sc/fdef ranks-inward-to-pass-center :args (sc/cat :from-rank ::p/rank) :ret #{1 2 3 4 5 6})
 
 (def one-inward {:inward true})
 (def one-outward {:inward false})
@@ -226,12 +227,20 @@
        (concat (repeat (ranks-inward-to-pass-center from-rank) one-inward)
                (repeat (- abs (ranks-inward-to-pass-center from-rank)) one-outward))
        (repeat abs {:inward inward})))))
+(sc/fdef units-rank-vec
+         :args (sc/or :destructured (sc/cat :inward ::inward :abs ::abs :from-rank ::p/rank)
+                      :structured (sc/cat :vec ::rank :from-rank ::p/rank))
+         :ret (sc/coll-of (sc/and ::rank one-just-abs) :kind seq? :min-count 1 :max-count 11 :distinct false))
 
 (s/defn units-file-vec :- [(s/one KingFileVec "first required") KingFileVec]
   ([vec :- FileVec] (units-file-vec (:abs vec) (:plusfile vec)))
   ([abs :- FileAbs, plusfile :- s/Bool] (cond (not (nil? plusfile))
                                               (repeat (one-if-nil-else-input abs)
                                                       {:plusfile plusfile}))))
+(sc/fdef units-file-vec
+         :args (sc/or :destructured (sc/cat :abs ::abs :plusfile ::plusfile)
+                      :structured (sc/cat :vec ::file))
+         :ret (sc/coll-of (sc/and ::file one-just-abs) :kind seq? :min-count 1 :max-count 23 :distinct false))
 
 (s/defn units-diag-vec :- [(s/one KingDiagVec "first required") KingDiagVec]
   ([vec :- DiagVec, from-rank :- Rank] (units-diag-vec (:inward vec) (:plusfile vec)
@@ -246,6 +255,12 @@
                 (repeat (- abs (ranks-inward-to-pass-center from-rank))
                         {:inward false :plusfile (not plusfile)}))
                (repeat abs {:inward inward :plusfile plusfile}))))))
+(sc/fdef units-diag-vec
+         :args (sc/or :descructured (sc/cat :inward (sc/and ::inward boolean?)
+                                            :plusfile (sc/and ::plusfile boolean?)
+                                            :abs ::abs :from-rank ::p/rank)
+                      :structured (sc/cat :vec ::diag :from-rank ::p/rank))
+         :ret (sc/coll-of (sc/and ::diag one-just-abs) :kind seq? :min-count 1 :max-count 11 :distinct false))
 
 ;; (defn units [vec from-rank] (cond (contains? vec :abs)
 ;;                                       (cond
