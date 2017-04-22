@@ -21,33 +21,49 @@
 ;;              (ANY ["/state/:id{[0-9]+}"] [id] (state-resource id)))))
 (defn intpars [id] (if-not (string? id) id (Integer/parseInt id)))
 (defn afterstate [{:keys [from to beforegame prom] :as ftp}]
-  (let [beforegameobj (d/get-gameplay-by-id beforegame)
-        _ (println (prn-str beforegameobj))]
+  (if-let [beforegameobj (d/get-gameplay-by-id beforegame)]
     (m/after-of-afters {:from from :to to :prom prom :before beforegameobj})))
 (defn aftergame [ftp]
-  (d/insert-gameplay! (afterstate ftp)))
+  (if-let [asta (afterstate ftp)]
+    (d/insert-gameplay! asta)))
 (defapi app
+  {:swagger
+   {:ui   "/api-docs"
+    :spec "/swagger.json"
+    :data {:info {:title       "TMC API"
+                  :description "Some docs"}
+           :tags [{:name "api", :description "main API"}]}}}
   (context "/api" []
     :tags ["api"]
     (GET "/game/:id/after" [id]
-      (ok (d/get-just-moves-by-before (intpars id))))
+      (let [id (intpars id)]
+        (if-let [res (d/get-just-moves-by-before id)]
+          (ok res) (not-found {:id id}))))
     (POST "/game/:id" [id]
       :body [ftp Desc]
       :return {(s/required-key :id) s/Int}
-      (ok (let [id (intpars id)]
-            {:id (d/insert-just-move!
-                  (let [ftp (assoc ftp :beforegame id)
-                        agame (aftergame ftp)]
-                    (assoc ftp :aftergame (aftergame ftp))))})))
+      (let [id  (intpars id)
+            ftp (assoc ftp :beforegame id)]
+        (if-let [agame (aftergame ftp)]
+          (ok {:id (d/insert-just-move!
+                    (assoc ftp :aftergame agame))})
+          (not-found {:id id}))))
     (GET "/move/:id" [id]
-      (ok (d/get-just-move-by-id (intpars id))))
+      (let [id (intpars id)]
+        (if-let [res (d/get-just-move-by-id id)]
+          (ok res) (not-found {:id id}))))
     (GET "/game/:id" [id]
-      (ok (d/get-gameplay-by-id (intpars id))))
+      (let [id (intpars id)]
+        (if-let [res (d/get-gameplay-by-id  id)]
+          (ok res) (not-found {:id id}))))
     (GET "/newgame" []
-      (ok {:id (d/insert-gameplay! st/newgame)}))
+      (if-let [id (d/insert-gameplay! st/newgame)]
+        (ok {:id id}) (internal-server-error {:id nil})))
     (GET "/state/:id" [id]
       :return StateWithID
-      (ok (d/get-state-by-id (intpars id))))))
+      (let [id (intpars id)]
+        (if-let [res (d/get-state-by-id  id)]
+          (ok res) (not-found {:id id}))))))
 
 (def handler app)
 
