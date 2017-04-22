@@ -1,7 +1,10 @@
-(defproject clj3manchess/engine "0.3.0-SNAPSHOT"
+(defproject clj3manchess/online-client "0.3.0-SNAPSHOT"
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/clojurescript "1.9.494"]
-                 [prismatic/schema "1.1.5"]]
+                 [clj3manchess/engine "0.3.0-SNAPSHOT"]
+                 [clj3manchess/online-core "0.3.0-SNAPSHOT"]
+                 [prismatic/schema "1.1.5"]
+                 [io.nervous/kvlt "0.1.4"]]
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.9"]
             [lein-doo "0.1.7"]
