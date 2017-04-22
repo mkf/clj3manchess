@@ -14,6 +14,6 @@
             [lein-kibit "0.1.3"]]
   :sub ["engine"
         "online/core"
-        "online/client"
-        "online/server"])
+        "online/client"])
+       ;; "online/server"])
 
