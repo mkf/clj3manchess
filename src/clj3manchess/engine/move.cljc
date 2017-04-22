@@ -231,8 +231,8 @@
                   (v/is-diagvec? vec) (nil? (v/moat-diag-vec from to (:plusfile vec)))
                   (v/is-knights? vec) (nil? (v/moat-knight-vec from to))
                   :else true))
-       (some (->> [(c/prev-col who) (c/next-col who)]
-                  (map #(is-there-a-threat b (b/where-is-king b %) to alive ep))))))
+       (some #(is-there-a-threat b (b/where-is-king b %) to alive ep)
+             [(c/prev-col who) (c/next-col who)])))
 
 (defonce queenside-rook-pos (v/castling-bef-rook-pos :queenside))
 (defonce kingside-rook-pos (v/castling-bef-rook-pos :kingside))
