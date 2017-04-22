@@ -1,9 +1,14 @@
 (ns clj3manchess.engine.castling
   (:require [schema.core :as s]
+            #?(:clj [clojure.spec :as sc]
+               :cljs [cljs.spec :as sc])
             [clj3manchess.engine.color :as col :refer [Color]]
             [clojure.set :as set]
             [clojure.string :as str]))
 
+(def types #{:queenside :kingside})
+(sc/def ::type types)
+(sc/def ::castling ::type)
 (def CastlingType (s/enum :queenside :kingside))
 
 (def CastlingPossibility {(s/required-key :color) Color

@@ -1,29 +1,40 @@
 (ns clj3manchess.engine.vectors
   (:require [schema.core :as s]
+            #?(:clj [clojure.spec :as sc]
+               :cljs [cljs.spec :as sc])
             [clojure.set :as set]
             [clj3manchess.engine.pos :as p
              :refer [rank file color-segm pos-on-segm same-file same-rank
                      file-dist same-or-opposite-file opposite-file Pos Rank File kfm]]
-            [clj3manchess.engine.fig :refer [FigType]]
+            [clj3manchess.engine.fig :as f :refer [FigType]]
             [clj3manchess.engine.castling :as cas :refer [CastlingType]]
             [clj3manchess.engine.color :as c]))
 
 (defn one-if-nil-else-input [input] (if (nil? input) 1 input))
-
 (def FileAbs (apply s/enum (range 1 24)))
 (def Abs FileAbs)
-(def RankAbs (apply s/enum (range 1 11)))
-;(s/def ::inward boolean?)
-;(s/def ::plusfile boolean?)
-;(s/def ::centeronecloser boolean?)
+(def RankAbs (apply s/enum (range 1 12)))
+(sc/def ::abs (sc/and int? pos? #(> % 24)))
+(sc/def ::inward (sc/nilable boolean?))
+(sc/def ::plusfile (sc/nilable boolean?))
+(sc/def ::centeronecloser (sc/nilable boolean?))
+(sc/def ::pawnlongjump (sc/nilable true?))
 (derive ::jumpvectype ::vectype)
 (derive ::pawnvectype ::jumpvectype)
 (derive ::pawnlongjumpvectype ::pawnvectype)
 (def PawnLongJumpVec (s/eq :pawnlongjumpvec))
+(defn bno [nono] (identity #(or (not (contains? % nono))
+                       (nil? (nono %)))))
+(sc/def ::pawnlongjump (sc/and (sc/keys :req-un [::pawnlongjump])
+                                  (bno :abs) (bno :inward) (bno :plusfile) (bno :centeronecloser) (bno :prom)
+                                  #(true? (:pawnlongjump %)) (bno :castling)))
 (derive ::knightvectype ::jumpvectype)
 (def KnightVec {(s/required-key :plusfile)        s/Bool
                 (s/required-key :inward)          s/Bool
                 (s/required-key :centeronecloser) s/Bool})
+(sc/def ::knight (sc/and (sc/keys :req-un [::inward ::plusfile ::centeronecloser])
+                            (bno :abs) (bno :pawnlongjump) (bno :prom) (bno :castling)
+                            #(boolean? (:inward %)) #(boolean? (:plusfile %)) #(boolean? (:centeronecloser %))))
 (derive ::continuousvectype ::vectype)
 (derive ::nopromcontinuousvectype ::continuousvectype)
 (derive ::multicontinuousvectype ::nopromcontinuousvectype)
@@ -39,6 +50,9 @@
 (derive ::multifilevectype ::multiaxisvectype)
 (def FileVec {(s/required-key :plusfile) s/Bool
               (s/optional-key :abs)      FileAbs})
+(sc/def ::file (sc/and (sc/keys :req-un [::plusfile] :opt-un [::abs])
+                          (bno :inward) (bno :centeronecloser) (bno :pawnlongjump) (bno :prom)
+                          #(boolean? (:plusfile %)) (bno :castling)))
 (derive ::rankvectype ::axisvectype)
 (derive ::nopromrankvectype ::rankvectype)
 (derive ::nopromrankvectype ::nopromaxisvectype)
@@ -46,6 +60,13 @@
 (derive ::multirankvectype ::nopromrankvectype)
 (def RankVec {(s/required-key :inward) s/Bool
               (s/optional-key :abs)    RankAbs})
+(defn rank-friendly-abs [x] (not (and (contains? x :abs) (<= 12 (:abs x)))))
+(defn one-just-abs [x] (not (and (contains? x :abs) (< 1 (:abs x)))))
+(defn one-if-prom [x] (not (and (contains? x :prom) (not (nil? (:prom x))) (not (one-just-abs x)))))
+(sc/def ::prom (sc/nilable f/promfigtypes))
+(sc/def ::rank (sc/and (sc/keys :req-un [::inward] :opt-un [::abs ::prom])
+                          (bno :plusfile) (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
+                          rank-friendly-abs #(boolean? (:inward %)) one-if-prom))
 (derive ::diagvectype ::continuousvectype)
 (derive ::nopromdiagvectype ::diagvectype)
 (derive ::nopromdiagvectype ::nopromcontinuousvectype)
@@ -54,7 +75,17 @@
 (def DiagVec {(s/required-key :plusfile) s/Bool
               (s/required-key :inward)   s/Bool
               (s/optional-key :abs)      RankAbs})
+(sc/def ::diag (sc/and (sc/keys :req-un [::inward ::plusfile] :opt-un [::abs ::prom])
+                          (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
+                          rank-friendly-abs #(boolean? (:inward %)) #(boolean? (:plusfile %)) one-if-prom))
+(sc/def ::filediag (sc/and (sc/keys :req-un [::plusfile] :opt-un [::abs ::prom ::inward])
+                              (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
+                              #(or ((bno :inward) %) (rank-friendly-abs %)) #(boolean? (:plusfile %)) one-if-prom))
+(sc/def ::rankdiag (sc/and (sc/keys :req-un [::inward] :opt-un [::abs ::prom ::plusfile])
+                              (bno :centeronecloser) (bno :pawnlongjump) rank-friendly-abs one-if-prom
+                              #(boolean? (:inward %)) (bno :castling)))
 (def AxisVec (s/conditional #(contains? % :plusfile) FileVec #(contains? % :inward) RankVec))
+(sc/def ::axis (sc/or :rank ::rank :file ::file))
 (def Prom (s/enum :queen :rook :bishop :knight))
 (derive ::pawnpromvectype ::pawnvectype)
 (derive ::pawnwalkvec ::pawnvectype)
@@ -67,19 +98,32 @@
 (derive ::pawnpromcapvectype ::pawnpromvectype)
 (def PawnWalkVec {(s/required-key :inward) s/Bool
                   (s/optional-key :prom)   Prom})
+(sc/def ::pawnwalk (sc/and (sc/keys :req-un [::inward] :opt-un [::prom ::abs])
+                              (bno :plusfile) (bno :centeronecloser) (bno :pawnlongjump) (bno :castling)
+                              one-just-abs #(boolean? (:inward %))))
 (def RankOrPawnWalkVec (s/conditional #(contains? % :abs) RankVec :else PawnWalkVec))
 (def PawnCapVec {(s/required-key :inward)   s/Bool
                  (s/required-key :plusfile) s/Bool
                  (s/optional-key :prom)     Prom})
+(sc/def ::pawncap (sc/and (sc/keys :req-un [::inward ::plusfile] :opt-un [::prom ::abs])
+                             (bno :centeronecloser) (bno :pawnlongjump) one-just-abs
+                             #(boolean? (:inward %)) #(boolean? (:plusfile %)) (bno :castling)))
 (def DiagOrPawnCapVec (s/conditional #(contains? % :abs) DiagVec :else PawnCapVec))
 (def PawnContVec (s/conditional #(not (contains? % :plusfile)) PawnWalkVec :else PawnCapVec))
+(sc/def ::pawncont (sc/and (sc/keys :req-un [::inward] :opt-un [::prom ::abs ::plusfile])
+                              (bno :centeronecloser) (bno :pawnlongjump) one-just-abs #(boolean? (:inward %))
+                              (bno :castling)))
 (def PawnPromVec (s/both PawnContVec {(s/required-key :inward) s/Bool
                                       (s/optional-key :plusfile) s/Bool
                                       (s/required-key :prom) Prom}))
+(sc/def ::pawnprom (sc/and (sc/keys :req-un [::inward ::prom] :opt-un [::abs ::plusfile])
+                              (bno :centeronecloser) (bno :pawnlongjump) (bno :castling) one-just-abs
+                              #(boolean? (:inward %)) #(not (nil? (:prom %)))))
 (def ContVecNoProm (s/conditional #(not (and (contains? % :inward)
                                              (contains? % :plusfile))) AxisVec :else DiagVec))
 (def ContVec (s/conditional #(or (contains? % :abs)
                                  (not (contains? % :inward))) ContVecNoProm :else PawnContVec))
+(sc/def ::cont (sc/or :rankdiag ::rankdiag :file ::file))
 (s/defn abs :- Abs [vec :- ContVec] (one-if-nil-else-input (:abs vec)))
 ;(s/def ::multipliedvec (s/and ::multiplicablevec
 ;                               (s/keys :req-un [::abs]) #(> (:abs %) 1)))
@@ -92,6 +136,8 @@
 (def KingContVec (s/conditional #(not (and (contains? % :inward)
                                            (contains? % :plusfile))) KingAxisVec :else KingDiagVec))
 (def CastlingVec {(s/required-key :castling) CastlingType})
+(sc/def ::castling (sc/and (sc/keys :req-un [::cas/castling]) (bno :inward) (bno :prom) (bno :abs) (bno :plusfile)
+                              (bno :centeronecloser) (bno :pawnlongjump)))
 ;(def KingVec (s/both ContVecNoProm {(s/optional-key :inward) s/Bool
 ;                                    (s/optional-key :plusfile) s/Bool}))
 (def KingVec (s/conditional #(contains? % :castling) CastlingVec :else KingContVec))
@@ -100,9 +146,14 @@
 ;;                               (s/keys :opt-un [::prom]))
 ;;                        :pawnlongjumpvec ::pawnlongjumpvec))
 (def PawnVec (s/conditional map? PawnContVec :else PawnLongJumpVec))
+(sc/def ::pawn (sc/or :cont ::pawncont :longjump ::pawnlongjump))
 (def Vec (s/conditional (complement map?) PawnLongJumpVec #(contains? % :centeronecloser) KnightVec
                         #(or (contains? % :abs)
                              (contains? % :prom)) ContVec :else KingVec))
+(sc/def ::any (sc/or :pawnlongjump ::pawnlongjump
+                     :knight ::knight
+                     :castling ::castling
+                     :cont ::cont))
 
 (s/defn sgn :- (s/enum -1 1) [n :- s/Num] (if (neg? n) -1 1))
 (s/defn ?1:0:-1 :- (s/enum -1 0 1) [n :- s/Num] (cond (pos? n) 1
