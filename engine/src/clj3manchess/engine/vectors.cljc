@@ -14,7 +14,7 @@
 (def FileAbs (apply s/enum (range 1 24)))
 (def Abs FileAbs)
 (def RankAbs (apply s/enum (range 1 12)))
-(sc/def ::abs (sc/and int? pos? #(> % 24)))
+(sc/def ::abs (sc/and int? pos? #(< % 24)))
 (sc/def ::inward (sc/nilable boolean?))
 (sc/def ::plusfile (sc/nilable boolean?))
 (sc/def ::centeronecloser (sc/nilable boolean?))
