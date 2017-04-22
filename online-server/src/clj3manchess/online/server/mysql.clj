@@ -63,7 +63,7 @@
                           (state-to-st state))])))
 (defn get-gameplay-by-id [id]
   (when-let [{:keys [state created]} (get-just-gp-by-id db {:id id})]
-    (assoc (get-state-by-id state) :gp_id id :created (tc/from-sql-time created))))
+    (assoc (get-state-by-id state) :gp_id id :created (str (tc/from-sql-time created)))))
 (defn insert-gameplay! [state]
   (:generated_key
    (into {}

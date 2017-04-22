@@ -22,8 +22,9 @@
 ;;              (ANY ["/state/:id{[0-9]+}"] [id] (state-resource id)))))
 (defn intpars [id] (if-not (string? id) id (Integer/parseInt id)))
 (defn afterstate [{:keys [from to beforegame prom] :as ftp}]
-  (if-let [beforegameobj (d/get-gameplay-by-id beforegame)]
-    (m/after-of-afters {:from from :to to :prom prom :before beforegameobj})))
+  (let [beforegameobj (d/get-gameplay-by-id beforegame)
+        _ (println beforegameobj)]
+    (if beforegameobj (m/after-of-afters {:from from :to to :prom prom :before beforegameobj}))))
 (defn aftergame [ftp]
   (if-let [asta (afterstate ftp)]
     (d/insert-gameplay! asta)))
@@ -67,7 +68,7 @@
           (ok res) (not-found {:id id}))))))
 
 (def handler (wrap-cors app
-                        :access-control-allow-origin "*"
+                        :access-control-allow-origin [#".*"]
                         :access-control-allow-methods [:get :post]))
 
 (defn init [] (do (d/create-tables)))
