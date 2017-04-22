@@ -17,3 +17,7 @@ ________X________X__X__X
 ________X_________XXXXX_
 ________X_________XXXXX_
 XXXXXXXXXXXXXXXXXXXX_XXX")))
+
+(t/deftest knight-capturing-thru-moat-newgame []
+  (t/is (= (sut/after-of-afters {:before st/newgame :from [0 1] :to [1 23]})
+           :capturing-thru-moats)))
