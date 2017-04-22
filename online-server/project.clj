@@ -1,4 +1,4 @@
-(defproject clj3manchess.online.server "0.1.0-SNAPSHOT"
+(defproject clj3manchess.online.server "0.2.0-SNAPSHOT"
   :plugins [[lein-ring "0.8.11"]]
   :ring {:handler clj3manchess.online.server/handler
          :init clj3manchess.online.server/init}

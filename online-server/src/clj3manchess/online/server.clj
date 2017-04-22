@@ -6,6 +6,7 @@
    [clj3manchess.engine.state :as st]
    [clj3manchess.engine.move :as m :refer [Desc]]
    [ring.util.http-response :refer :all]
+   [ring.middleware.cors :refer [wrap-cors]]
    [clj3manchess.online.server.mysql :as d]
    [clj3manchess.online.core :refer [StateWithID]]))
 
@@ -65,6 +66,8 @@
         (if-let [res (d/get-state-by-id  id)]
           (ok res) (not-found {:id id}))))))
 
-(def handler app)
+(def handler (wrap-cors app
+                        :access-control-allow-origin [#"*"]
+                        :access-control-allow-methods [:get :post]))
 
 (defn init [] (do (d/create-tables)))
