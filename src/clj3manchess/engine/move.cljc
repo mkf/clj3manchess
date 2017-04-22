@@ -421,12 +421,11 @@
 (defn generate-afters-mapentries ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
   [{before :before :as ftp}] (->> ftp
                                   generate-vecs
-                                  (map (fn [x] [x (after x)]))
-                                  (filter second)))
+                                  (map (fn [x] [x (after x)]))))
 (defn generate-afters-seq
   [{before :before :as ftp}] (->> ftp
                                   generate-vecs
-                                  (keep after)))
+                                  (map after)))
 (defn generate-afters-set [ftp] (set (generate-afters-seq ftp)))
 (defn generate-afters-map [ftp] (into {} (generate-afters-mapentries ftp)))
 (defn after-of-afters [ftp] (let [settt (generate-afters-set ftp)
