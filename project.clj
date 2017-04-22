@@ -4,7 +4,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.494"]
                  [prismatic/schema "1.1.5"]
-                 [clj-http "3.5.0"]]
+                 [io.nervous/kvlt "0.1.4"]]
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.9"]
             [lein-doo "0.1.7"]
