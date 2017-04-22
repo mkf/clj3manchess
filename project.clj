@@ -3,8 +3,8 @@
                  [org.clojure/clojurescript "1.9.494"]
                  [clj3manchess/engine "0.3.0-SNAPSHOT"]
                  [clj3manchess/online-core "0.3.0-SNAPSHOT"]
-                 [clj3manchess/online-client "0.3.0-SNAPSHOT"]
-                 [clj3manchess/online-server "0.3.0-SNAPSHOT"]]
+                 [clj3manchess/online-client "0.3.0-SNAPSHOT"]]
+                 ;;[clj3manchess/online-server "0.3.0-SNAPSHOT"]] ;;it is not a library, actually
   :plugins [[lein-sub "0.3.0"]
             [lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.9"]
