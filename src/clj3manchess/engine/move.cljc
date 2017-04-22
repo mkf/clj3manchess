@@ -257,6 +257,18 @@
                                                            p/kfm #{{:type :kingside} {:type :queenside}}
                                                            nil))))))
 
+(defn asedac-new-board [vec board moves-next whatype from to en-passant]
+  (cond (v/is-castvec? vec) (board-after-castling board moves-next (:castling vec))
+        (and (v/is-diagvec? vec)
+             (= whatype :pawn)) (board-after-pawn-cap board from to en-passant)
+        (f/promfigtypes (:prom vec)) (board-after-pawn-prom board from to (:prom vec))
+        :else (b/mov board from to)))
+(defn after-en-passant-nothing [ep] (if (nil? (:last ep)) {} (:prev (:last ep))))
+(defn after-en-passant-something [ep where] (assoc (after-en-passant-nothing ep) :last where))
+(defn after-en-passant [ep vec from]
+  (if (v/is-pawnlongjumpvec? vec)
+    (after-en-passant-something ep (p/file from))
+    (after-en-passant-nothing ep)))
 (s/defn after-sans-eval-death-and-check :- (s/either st/State Impossibility)
   [{vec :vec
     [from-rank from-file :as from] :from
@@ -268,13 +280,8 @@
       (let [what (b/getb board from)
            tosq (b/getb board to)
            whatype (:type what)
-           new-board (cond (v/is-castvec? vec) (board-after-castling board moves-next (:castling vec))
-                           (and (v/is-diagvec? vec)
-                                (= whatype :pawn)) (board-after-pawn-cap board from to en-passant)
-                           (f/promfigtypes (:prom vec)) (board-after-pawn-prom board from to (:prom vec))
-                           :else (b/mov board from to))
-           new-en-passant (if (nil? (:last en-passant)) {} {:prev (:last en-passant)})
-           new-en-passant (if (v/is-pawnlongjumpvec? vec) (assoc new-en-passant :last (p/file from)) new-en-passant)]
+           new-board (asedac-new-board vec board moves-next whatype from to en-passant)
+           new-en-passant (after-en-passant en-passant vec from)]
        (if (are-we-initiating-a-check-thru-moat vec from to moves-next alive new-en-passant new-board)
          :initiating-check-thru-moats
          (let [nxtcolmvs (c/next-col moves-next)
