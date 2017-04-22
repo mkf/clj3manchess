@@ -90,18 +90,18 @@
   [m :- VecMove]
   (cond
     (nil? (get-bef-sq m (:from m))) :nothing-to-move-here
-    (and (= (:type (get-bef-sq m (:from m))) :pawn)
+    (and (map? (:vec m)) (= (:type (get-bef-sq m (:from m))) :pawn)
          (contains? (:vec m) :plusfile)
          (not (can-we-en-passant m))) :cannot-en-passant
     (= (:color (get-bef-sq m (:from m)))
        (:color (get-bef-sq m (to m)))) :capturing-own-piece
-    (and (contains? (:vec m) :abs)
+    (and (map? (:vec m)) (contains? (:vec m) :abs)
          (not (b/check-empties (:board (:before m))
                                (v/empties-cont-vec (:vec m) (:from m))))) :not-all-empties
-    (and (contains? (:vec m) :castling)
+    (and (map? (:vec m)) (contains? (:vec m) :castling)
          ((complement (:castling (:before m)))
           {:type (:castling (:vec m)) :color (:moves-next (:before m))})) :no-castling-possibility
-    (and (contains? (:vec m) :castling)
+    (and (map? (:vec m)) (contains? (:vec m) :castling)
          (not (b/check-empties
                (:board (:before m))
                (->> (v/castling-empties (:castling (:vec m)))
@@ -121,7 +121,8 @@
     ;                                             (if-not (:crossed-center (get-bef-sq m (:from m)))
     ;                                               :wrong-pawn-direction
     ;                                               (if )))
-    (and (= (:type (get-bef-sq m (:from m))) :pawn)
+    (and (map? (:vec m))
+         (= (:type (get-bef-sq m (:from m))) :pawn)
          (= (:inward (:vec m)) (:crossed-center (get-bef-sq m (:from m))))) :wrong-pawn-direction
     (and (= (:type (get-bef-sq m (:from m))) :pawn)
          (= (p/rank (to m)) 5)
@@ -263,30 +264,30 @@
     :as m} :- VecMove]
   (if-let [impos (initial-impossibilities-check m)]
     impos
-    (let [to (v/addvec vec from)
-          what (b/getb board from)
-          tosq (b/getb board to)
-          whatype (:type what)
-          new-board (cond (v/is-castvec? vec) (board-after-castling board moves-next (:castling vec))
-                          (and (v/is-diagvec? vec)
-                               (= whatype :pawn)) (board-after-pawn-cap board from to en-passant)
-                          (f/promfigtypes (:prom vec)) (board-after-pawn-prom board from to (:prom vec))
-                          :else (b/mov board from to))
-          new-en-passant (if (nil? (:last en-passant)) {} {:prev (:last en-passant)})
-          new-en-passant (if (= :pawnlongjump vec) (assoc :last (p/file from) new-en-passant) new-en-passant)]
-      (if (are-we-initiating-a-check-thru-moat vec from to moves-next alive new-en-passant new-board)
-        :initiating-check-thru-moats
-        (let [nxtcolmvs (c/next-col moves-next)
-              prvcolmvs (c/prev-col moves-next)]
-          {:board new-board
-           :moats (after-moats-state m new-board)
-           :moves-next (if (alive nxtcolmvs) nxtcolmvs prvcolmvs)
-           :castling (after-castling castling moves-next whatype from to)
-           :en-passant new-en-passant
-           :halfmoveclock (if (or (= whatype :pawn)
-                                  (not (nil? tosq))) 0 (inc halfmoveclock))
-           :fullmovenumber (inc fullmovenumber)
-           :alive alive})))))
+    (if-let [to (v/addvec vec from)]
+      (let [what (b/getb board from)
+           tosq (b/getb board to)
+           whatype (:type what)
+           new-board (cond (v/is-castvec? vec) (board-after-castling board moves-next (:castling vec))
+                           (and (v/is-diagvec? vec)
+                                (= whatype :pawn)) (board-after-pawn-cap board from to en-passant)
+                           (f/promfigtypes (:prom vec)) (board-after-pawn-prom board from to (:prom vec))
+                           :else (b/mov board from to))
+           new-en-passant (if (nil? (:last en-passant)) {} {:prev (:last en-passant)})
+           new-en-passant (if (v/is-pawnlongjumpvec? vec) (assoc new-en-passant :last (p/file from)) new-en-passant)]
+       (if (are-we-initiating-a-check-thru-moat vec from to moves-next alive new-en-passant new-board)
+         :initiating-check-thru-moats
+         (let [nxtcolmvs (c/next-col moves-next)
+               prvcolmvs (c/prev-col moves-next)]
+           {:board new-board
+            :moats (after-moats-state m new-board)
+            :moves-next (if (alive nxtcolmvs) nxtcolmvs prvcolmvs)
+            :castling (after-castling castling moves-next whatype from to)
+            :en-passant new-en-passant
+            :halfmoveclock (if (or (= whatype :pawn)
+                                   (not (nil? tosq))) 0 (inc halfmoveclock))
+            :fullmovenumber (inc fullmovenumber)
+            :alive alive}))) (println vec from))))
 
 (defonce AMFT (->> p/all-pos
                    (map (fn [from] [from (->> p/all-pos
@@ -403,7 +404,7 @@
   ([figtype ;;:- f/FigType
     {:keys [from prom] [rank-to :as to] :to :as ftp}] ;;:- (s/either Desc DescMove)]
    (->> ((v/vecft (v/tvec figtype)) from to)
-        (#(cond (nil? %) #{} (map? %) #{%} :else %))
+        (#(cond (nil? %) #{} (or (= :pawnlongjump %) (map? %)) #{%} :else %))
         (map (if (and (= figtype :pawn)
                       (= rank-to 5)
                       (not (nil? prom)))
