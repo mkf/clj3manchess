@@ -5,7 +5,7 @@
             [slingshot.slingshot :refer [try+]]
             [clj-http.client :as cl]))
 
-(def ^:dynamic *base-url* "http://localhost:3000")
+(def ^:dynamic *base-url* "http://localhost:8083")
 (def ^:dynamic *after-base-url* "/api")
 (defn url [& following] (apply (partial str *base-url* *after-base-url*) following))
 
