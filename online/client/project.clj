@@ -1,5 +1,5 @@
 (defproject clj3manchess/online-client "0.3.0-SNAPSHOT"
-  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.494"]
                  [clj3manchess/engine "0.3.0-SNAPSHOT"]
                  [clj3manchess/online-core "0.3.0-SNAPSHOT"]
