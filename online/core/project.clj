@@ -1,4 +1,4 @@
-(defproject clj3manchess "0.3.0-SNAPSHOT"
+(defproject clj3manchess/online-core "0.3.0-SNAPSHOT"
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.494"]
                  [prismatic/schema "1.1.5"]]
