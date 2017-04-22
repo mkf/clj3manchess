@@ -125,7 +125,7 @@
                                                 (or (contains? vec :plusfile)
                                                     (contains? vec :inward))))
 (s/defn is-castvec? :- s/Bool [vec :- Vec] (and (map? vec) (contains? vec :castling)))
-(s/defn is-pawnlongjumpvec? :- s/Bool [vec :- Vec] (= vec :pawnlongjumpvec))
+(s/defn is-pawnlongjumpvec? :- s/Bool [vec :- Vec] (= vec :pawnlongjump))
 
 (s/defn type-of-cont-vec :- (s/enum :rankvec :filevec :diagvec)
   ([vec :- ContVecNoProm] (cond (is-rankvec? vec) :rankvec
