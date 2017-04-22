@@ -22,7 +22,8 @@
 (derive ::jumpvectype ::vectype)
 (derive ::pawnvectype ::jumpvectype)
 (derive ::pawnlongjumpvectype ::pawnvectype)
-(def PawnLongJumpVec (s/eq :pawnlongjumpvec))
+;;(def PawnLongJumpVec (s/eq :pawnlongjumpvec))
+(def PawnLongJumpVec {(s/required-key :pawnlongjump) (s/eq true)})
 (defn bno [nono] (identity #(or (not (contains? % nono))
                        (nil? (nono %)))))
 (sc/def ::pawnlongjump (sc/and (sc/keys :req-un [::pawnlongjump])
@@ -189,7 +190,8 @@
   (sc/valid? ::cont vec))
 (s/defn is-castvec? :- s/Bool [vec :- Vec] ;; (and (map? vec) (contains? vec :castling))
   (sc/valid? ::castling vec))
-(s/defn is-pawnlongjumpvec? :- s/Bool [vec :- Vec] (= vec :pawnlongjump))
+(s/defn is-pawnlongjumpvec? :- s/Bool [vec :- Vec] ;; (= vec :pawnlongjump)
+  (sc/valid? ::pawnlongjump vec))
 
 (s/defn type-of-cont-vec :- (s/enum :rankvec :filevec :diagvec)
   ([vec :- ContVecNoProm] (cond (is-rankvec? vec) :rankvec
@@ -493,7 +495,8 @@
                  (tfmapset :inward))))
 (s/defn pawnlongjump-vecft :- (s/maybe PawnLongJumpVec) [f :- Pos t :- Pos]
   (cond (and (= (rank f) 1) (= (rank t) 3)
-             (= (file f) (file t))) :pawnlongjump))
+             (= (file f) (file t))) ;; :pawnlongjump
+        {:pawnlongjump true}))
 (s/defn pawncap-vecft :- (s/maybe KingDiagVec) [f :- Pos, t :- Pos]
   (first (filter #(and (not (creek f %))
                        (= t (addvec % f)))
