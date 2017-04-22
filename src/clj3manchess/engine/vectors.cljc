@@ -54,7 +54,7 @@
 (def DiagVec {(s/required-key :plusfile) s/Bool
               (s/required-key :inward)   s/Bool
               (s/optional-key :abs)      RankAbs})
-(def AxisVec (s/either FileVec RankVec))
+(def AxisVec (s/conditional #(contains? % :plusfile) FileVec #(contains? % :inward) RankVec))
 (def Prom (s/enum :queen :rook :bishop :knight))
 (derive ::pawnpromvectype ::pawnvectype)
 (derive ::pawnwalkvec ::pawnvectype)
@@ -67,15 +67,19 @@
 (derive ::pawnpromcapvectype ::pawnpromvectype)
 (def PawnWalkVec {(s/required-key :inward) s/Bool
                   (s/optional-key :prom)   Prom})
-(def RankOrPawnWalkVec (s/either RankVec PawnWalkVec))
+(def RankOrPawnWalkVec (s/conditional #(contains? % :abs) RankVec :else PawnWalkVec))
 (def PawnCapVec {(s/required-key :inward)   s/Bool
                  (s/required-key :plusfile) s/Bool
                  (s/optional-key :prom)     Prom})
-(def DiagOrPawnCapVec (s/either DiagVec PawnCapVec))
-(def PawnContVec (s/either PawnWalkVec PawnCapVec))
-(def PawnPromVec (s/both PawnContVec {(s/required-key :prom) Prom}))
-(def ContVecNoProm (s/either AxisVec DiagVec))
-(def ContVec (s/either ContVecNoProm PawnContVec))
+(def DiagOrPawnCapVec (s/conditional #(contains? % :abs) DiagVec :else PawnCapVec))
+(def PawnContVec (s/conditional #(not (contains? % :plusfile)) PawnWalkVec :else PawnCapVec))
+(def PawnPromVec (s/both PawnContVec {(s/required-key :inward) s/Bool
+                                      (s/optional-key :plusfile) s/Bool
+                                      (s/required-key :prom) Prom}))
+(def ContVecNoProm (s/conditional #(not (and (contains? % :inward)
+                                             (contains? % :plusfile))) AxisVec :else DiagVec))
+(def ContVec (s/conditional #(or (contains? % :abs)
+                                 (not (contains? % :inward))) ContVecNoProm :else PawnContVec))
 (s/defn abs :- Abs [vec :- ContVec] (one-if-nil-else-input (:abs vec)))
 ;(s/def ::multipliedvec (s/and ::multiplicablevec
 ;                               (s/keys :req-un [::abs]) #(> (:abs %) 1)))
@@ -84,18 +88,21 @@
 (def KingFileVec {(s/required-key :plusfile) s/Bool})
 (def KingDiagVec {(s/required-key :inward)   s/Bool
                   (s/required-key :plusfile) s/Bool})
-(def KingAxisVec (s/either KingRankVec KingFileVec))
-(def KingContVec (s/either KingAxisVec KingDiagVec))
+(def KingAxisVec (s/conditional #(contains? % :inward) KingRankVec #(contains? % :plusfile) KingFileVec))
+(def KingContVec (s/conditional #(not (and (contains? % :inward)
+                                           (contains? % :plusfile))) KingAxisVec :else KingDiagVec))
 (def CastlingVec {(s/required-key :castling) CastlingType})
 ;(def KingVec (s/both ContVecNoProm {(s/optional-key :inward) s/Bool
 ;                                    (s/optional-key :plusfile) s/Bool}))
-(def KingVec (s/either CastlingVec KingContVec))
+(def KingVec (s/conditional #(contains? % :castling) CastlingVec :else KingContVec))
 ;; (s/def ::pawnvec (s/or :pawncontvec (s/and (s/or ::diagvec ::rankvec)
 ;;                               #(not (contains? % :abs))
 ;;                               (s/keys :opt-un [::prom]))
 ;;                        :pawnlongjumpvec ::pawnlongjumpvec))
-(def PawnVec (s/either PawnContVec PawnLongJumpVec))
-(def Vec (s/either PawnLongJumpVec KnightVec ContVec KingVec))
+(def PawnVec (s/conditional map? PawnContVec :else PawnLongJumpVec))
+(def Vec (s/conditional (complement map?) PawnLongJumpVec #(contains? % :centeronecloser) KnightVec
+                        #(or (contains? % :abs)
+                             (contains? % :prom)) ContVec :else KingVec))
 
 (s/defn sgn :- (s/enum -1 1) [n :- s/Num] (if (neg? n) -1 1))
 (s/defn ?1:0:-1 :- (s/enum -1 0 1) [n :- s/Num] (cond (pos? n) 1
@@ -109,8 +116,8 @@
 
 (s/defn is-diagvec? :- s/Bool [vec :- Vec] (and (map? vec)
                                                 (every? true?
-                                                    (map #(contains? vec %)
-                                                         [:inward :plusfile]))))
+                                                        (map #(contains? vec %)
+                                                             [:inward :plusfile]))))
 (s/defn is-knights? :- s/Bool [vec :- Vec] (and (map? vec) (contains? vec :centeronecloser)))
 (s/defn is-rankvec? :- s/Bool [vec :- Vec] (and (map? vec)
                                                 (contains? vec :inward)
@@ -259,10 +266,11 @@
           (if plusfile -10 10))
        24))
 
-(s/defn diag-split-vecs :- (s/either {(s/required-key :short-upto-rank5) DiagVec}
-                                     {(s/optional-key :short-upto-rank5)      DiagVec
-                                      (s/required-key :solely-thru-center)    KingDiagVec
-                                      (s/optional-key :short-past-the-center) DiagVec})
+(s/defn diag-split-vecs :- (s/conditional #(not (contains? % :solely-thru-center))
+                                          {(s/required-key :short-upto-rank5) DiagVec} :else
+                                          {(s/optional-key :short-upto-rank5)      DiagVec
+                                           (s/required-key :solely-thru-center)    KingDiagVec
+                                           (s/optional-key :short-past-the-center) DiagVec})
   ([vec :- DiagVec, rank-from :- p/Rank]
    (diag-split-vecs (:inward vec)
                     (:plusfile vec)
