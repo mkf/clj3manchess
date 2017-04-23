@@ -380,7 +380,7 @@
                                                               (some (AMFT from)))))
   ([sta who from vecft to] (when-not (nil? to)
                              (let [vecft (vecft from to)
-                                   vecft (if (and (coll? vecft) (not (map? vecft))) vecft #{vecft})]
+                                   vecft (if (and (coll? vecft) (not (sc/valid? ::v/any vecft))) vecft #{vecft})]
                                (->> vecft
                                     (some #(can-i-move-wo-check sta who from vecft to %))
                                     (when-not (->> vecft
