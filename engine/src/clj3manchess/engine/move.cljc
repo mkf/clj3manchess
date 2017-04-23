@@ -394,22 +394,24 @@
                                   (and not-nil (or not-impos just-ok-impos)))))
 
 (s/defn eval-death :- st/State [sta :- st/State]
-  (let [noking (-> contains?
-                   (partial (b/where-are-kings (:board sta)))
-                   complement
-                   (filter c/colors)
-                   set)
-        checkmate (-> can-i-move-wo-check
-                      (partial sta)
-                      complement
-                      (filter c/colors)
-                      set)
-        died (set/union noking checkmate)]
-    (->> sta
-         :alive
-         (remove died)
-         set
-         (assoc sta :alive))))
+  (let [;; noking (-> (partial contains? (b/where-are-kings (:board sta)))
+        ;;            complement
+        ;;            (filter c/colors)
+        ;;            set)
+        noking (-> (filter #((complement contains?) (b/where-are-kings (:board sta)) %) c/colors) set)
+        ;; checkmate (-> (partial can-i-move-wo-check sta)
+        ;;               complement
+        ;;               (filter c/colors)
+        ;;               set)
+        checkmate (-> (filter #(not (can-i-move-wo-check sta %)) c/colors) set)
+        died (set/union noking checkmate)
+        _ (println (prn-str [noking checkmate]))]
+    (assoc sta :alive
+           (-> sta
+                :alive
+                set
+                (set/difference died)
+                set))))
 (s/defn threat-checking :- [p/Pos] [board :- b/Board, where :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
   (let [who (:color (b/getb board where))]
     (->> p/all-pos
