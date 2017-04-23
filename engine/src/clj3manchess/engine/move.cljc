@@ -352,6 +352,11 @@
                                      (not (nil? tosq))) 0 (inc halfmoveclock))
               :fullmovenumber (inc fullmovenumber)
               :alive alive})))) (println m from))))
+(defn new-after-sans-eval-death-and-check
+  [{[from-rank from-file :as from] :from
+    {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
+    impossib :impossibility
+    :as m}] nil)
 
 (defonce AMFT (->> p/all-pos
                    (map (fn [from] [from (->> p/all-pos

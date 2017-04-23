@@ -2,8 +2,12 @@
   (:require [clj3manchess.engine.move :as sut :refer [eval-death]]
             #?(:clj [clojure.test :as t]
                :cljs [cljs.test :as t :include-macros true])
+            #?(:clj [clojure.spec.test :as stest]
+               :cljs [cljs.spec.test :as stest])
             [clj3manchess.engine.state :as st]
             [clj3manchess.engine.board :as b]))
+
+(stest/instrument `b/getb)
 
 (t/deftest eval-death-rem-king-gray []
   (t/is (= (:alive (eval-death (assoc st/newgame :board [::b/newgame {[0 12] nil}])))

@@ -31,7 +31,7 @@
 (sc/def ::vec (sc/or :arr ::arr :diffed ::diffed))
 (s/defn diff-board? :- s/Bool [b :- BoardOfVectorStructure] (map? (second b)))
 (def Board (s/either AbsBoard DiffBoard))
-(sc/def ::any (sc/or :abs ::abs :diffed ::diff))
+(sc/def ::any (sc/or :abs ::abs :diffed ::diffed))
 
 (s/defn get-from-array-board :- Square [b :- ArrayBoard, pos :- Pos]
   (-> b
