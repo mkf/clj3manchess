@@ -1,5 +1,7 @@
 (ns clj3manchess.engine.board
   (:require [schema.core :as s]
+            #?(:clj [clojure.spec :as sc]
+               :cljs [cljs.spec :as sc])
             [clj3manchess.engine.fig :as f :refer [FigType Fig]]
             [clj3manchess.engine.vectors :as vec]
             [clj3manchess.engine.pos :as p :refer [Pos rank file]]
@@ -10,63 +12,104 @@
 ;(s/def ::arrayboard (s/coll-of ::arrayboardrank :kind vector? :count 6 :distinct false))
 
 (def Square (s/maybe Fig))
+(sc/def ::sq (sc/nilable ::f/fig))
 
 (def ArrayBoard [[Square]])
+(sc/def ::arr (sc/coll-of (sc/coll-of ::sq :king vector? :max-count 24 :distinct false :into [])
+                             :kind vector? :max-count 6 :distinct false :into []))
 (def MapBoard {Pos Fig})
+(sc/def ::map (sc/map-of ::p/pos ::f/fig :kind map? :max-count 144 :into {}))
 (def NewGameBoard (s/eq ::newgame))
+(sc/def ::new #{::newgame})
 (def AbsBoard (s/either ArrayBoard MapBoard NewGameBoard))
+(sc/def ::abs (sc/or :arr ::arr :map ::map :new ::new))
 (def Diff {Pos Square})
+(sc/def ::diffs (sc/map-of ::p/pos ::sq :kind map? :max-count 144 :into {}))
 (def DiffBoard [(s/one AbsBoard "base") (s/one Diff "diff")])
+(sc/def ::diffed (sc/tuple ::abs ::diffs))
 (def BoardOfVectorStructure (s/either DiffBoard ArrayBoard))
+(sc/def ::vec (sc/or :arr ::arr :diffed ::diffed))
 (s/defn diff-board? :- s/Bool [b :- BoardOfVectorStructure] (map? (second b)))
 (def Board (s/either AbsBoard DiffBoard))
+(sc/def ::any (sc/or :abs ::abs :diffed ::diff))
 
 (s/defn get-from-array-board :- Square [b :- ArrayBoard, pos :- Pos]
   (-> b
       (get (rank pos))
       (get (file pos))))
+(sc/fdef get-from-array-board
+         :args (sc/cat :b ::arr :pos ::p/pos)
+         :ret ::sq)
 
 (s/defn get-from-map-board :- Square [b :- MapBoard, pos :- Pos] (get b pos))
+(sc/fdef get-from-map-board
+         :args (sc/cat :b ::map :pos ::p/pos)
+         :ret ::sq)
 
 (def newgame-zero-rank-segm [:rook :knight :bishop :queen :king :bishop :knight :rook])
 
 (s/defn get-from-newgame-board :- Square
-  ([b :- NewGameBoard, pos :- Pos] (get-from-newgame-board pos))
+  ([b :- NewGameBoard, pos :- Pos] (if (not= ::newgame b) ::sc/invalid
+                                       (get-from-newgame-board pos)))
   ([pos :- Pos] (case (rank pos)
                   0 {:type  (get newgame-zero-rank-segm (mod (file pos) 8))
                      :color (p/color-segm pos)}
                   1 {:type :pawn :color (p/color-segm pos) :crossed-center false}
                   nil)))
+(sc/fdef get-from-newgame-board
+         :args (sc/or :both (sc/cat :b ::new :pos ::p/pos)
+                      :pos (sc/cat :pos ::p/pos))
+         :ret ::sq)
 
+(sc/def ::dispatch-abs (sc/or :arr ::arr :map ::map :new ::new))
 (s/defn get-from-abs-board :- Square [b :- AbsBoard, pos :- Pos]
   (cond
     (vector? b) (get-from-array-board b pos)
     (map? b) (get-from-map-board b pos)
     (= ::newgame b) (get-from-newgame-board pos)))
+(sc/fdef get-from-abs-board :args (sc/cat :b ::abs :pos ::p/pos) :ret ::sq)
 
 (s/defn get-from-diff-board :- Square [b :- DiffBoard, pos :- Pos]
   (if (contains? (second b) pos)
     (get (second b) pos)
     (get-from-abs-board (first b) pos)))
+(sc/fdef get-from-diff-board :args (sc/cat :b ::diffed :pos ::p/pos) :ret ::sq)
 
 (s/defn getb :- Square [b :- Board, pos :- Pos]
   (cond
     (vector? b) (if (diff-board? b) (get-from-diff-board b pos) (get-from-array-board b pos))
     :else (get-from-abs-board b pos)))
+(sc/fdef getb :args (sc/cat :b ::any :pos ::p/pos) :ret ::sq)
 
 (s/defn where-are-figs :- [Pos] [b :- Board, fig :- Fig]
   (filter (comp (partial = fig)
                 (partial getb b)) p/all-pos))
+(sc/fdef where-are-figs :args (sc/cat :b ::any :fig ::f/fig)
+         :ret (sc/coll-of ::p/pos :kind sequential? :max-count 8 :distinct true)
+         :fn #(for [x (:ret %)] (= (getb (-> % :args :b) x)
+                                   (-> % :args :fig))))
 (s/defn where-are-figs-of-type :- [Pos] [b :- Board, typ :- FigType]
   (filter (comp (partial = typ)
                 :type
                 (partial getb b)) p/all-pos))
+(sc/fdef where-are-figs-of-type :args (sc/cat :b ::any :typ ::f/type)
+         :ret (sc/coll-of ::p/pos :kind sequential? :max-count 24 :distinct true)
+         :fn #(for [x (:ret %)] (= (:type (getb (-> % :args :b) x))
+                                   (-> % :args :typ))))
 (s/defn where-are-kings :- {c/Color Pos} [b :- Board]
   (into {} (map (fn [x] [(:color (getb b x)) x]) (where-are-figs-of-type b :king))))
+(sc/fdef where-are-kings :args (sc/cat :b ::any)
+         :ret (sc/coll-of ::p/pos :kind sequential? :max-count 3 :distinct true)
+         :fn #(for [[color x] (:ret %)] (= (getb (-> % :args :b) x)
+                                           {:type :king :color color})))
 (s/defn where-are-figs-of-color :- [Pos] [b :- Board, col :- c/Color]
   (filter (comp (partial = col)
                 :color
                 (partial getb b)) p/all-pos))
+(sc/fdef where-are-figs-of-color :args (sc/cat :b ::any :col ::c/color)
+         :ret (sc/coll-of ::p/pos :kind sequential? :max-count 16 :distinct true)
+         :fn #(for [x (:ret %)] (= (:color (getb (-> % :args :b) x))
+                                   (-> % :args :col))))
 (s/defn where-is-fig :- (s/maybe Pos) [b :- Board, fig :- Fig] (first (where-are-figs b fig)))
 (s/defn where-is-king :- (s/maybe Pos) [b :- Board, col :- c/Color] (where-is-fig b {:type :king :color col}))
 

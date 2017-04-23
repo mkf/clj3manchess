@@ -1,16 +1,25 @@
 (ns clj3manchess.engine.fig
   (:require [schema.core :as s]
+            #?(:clj [clojure.spec :as sc]
+               :cljs [cljs.spec :as sc])
             [clj3manchess.engine.color :as c :refer [Color]]
             [clojure.string :as stri]
             [clojure.set :as set]))
 
 (def figtypeset #{:pawn :rook :knight :bishop :queen :king})
+(sc/def ::type figtypeset)
+(sc/def ::crossed-center (sc/nilable boolean?))
 (def figtypeset-sanspawn (remove #{:pawn} figtypeset))
 (def FigType (apply s/enum figtypeset))
 (def FigTypeNotPawn (apply s/enum figtypeset-sanspawn))
 
 (def Piece {(s/required-key :type)  FigType
             (s/required-key :color) Color})
+(sc/def ::piece (sc/keys :req-un [::type ::c/color]))
+(sc/def ::fig (sc/and (sc/keys :req-un [::type ::c/color])
+                      #(= (and (contains? % :crossed-center)
+                               (not (nil? (:crossed-center %))))
+                          (= (:type %) :pawn))))
 
 (def FigNotPawn {(s/required-key :type)  FigTypeNotPawn
                  (s/required-key :color) Color})

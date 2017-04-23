@@ -2,7 +2,7 @@
   :plugins [[lein-ring "0.8.11"]]
   :ring {:handler clj3manchess.online.server/handler
          :init clj3manchess.online.server/init}
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [clj3manchess/engine "0.3.0-SNAPSHOT"]
                  [clj3manchess/online-core "0.3.0-SNAPSHOT"]
                  [liberator "0.14.1"] ;;not anymore

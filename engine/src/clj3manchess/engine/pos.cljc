@@ -7,9 +7,13 @@
 
 ;(defrecord Pos [rank file])
 (def Rank (apply s/enum (range 6)))
+(sc/def ::rank (sc/and int? #(<= 0 % 5)))
+(sc/def ::file (sc/and int? #(<= 0 % 24)))
+(sc/def ::fileonsegm (sc/and int? #(<= 0 % 7)))
 (def File (apply s/enum (range 24)))
 (def FileOnSegm (apply s/enum (range 8)))
 (def Pos [(s/one Rank "rank") (s/one File "file")])
+(sc/def ::pos (sc/tuple ::rank ::file))
 
 (s/defn rank :- Rank [pos :- Pos] (first pos))
 (s/defn file :- File [pos :- Pos] (last pos))
@@ -45,4 +49,4 @@
        (map (fn [rank] (->> (range 24)
                             (map (fn [file] [rank, file])))))
        (apply concat)))
-
+(sc/def all-pos (sc/coll-of ::pos :kind sequential? :count 144 :distinct true))
