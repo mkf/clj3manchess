@@ -441,10 +441,12 @@
      (butlast units)
      from)))
 
-(def BoundVec {(s/required-key :from) Pos
-               (s/required-key :vec)  Vec})
-
-(s/defn bv-to :- Pos [bv :- BoundVec] (addvec (:vec bv) (:from bv)))
+;; (def BoundVec {(s/required-key :from) Pos
+;;                (s/required-key :vec)  Vec})
+(sc/def ::from ::p/pos)
+(sc/def ::bound (sc/and (sc/keys :req-un [::from]) ::any))
+(s/defn bv-to :- Pos [bv] (addvec bv (:from bv)))
+(sc/fdef bv-to :args (sc/cat :bv ::bound) :ret ::p/pos)
 
 (s/defn moat-diag-vec :- (s/maybe c/Color) [from :- Pos, to :- Pos, plusfile :- s/Bool]
   (cond (zero? (rank from))
@@ -491,9 +493,10 @@
   [keyword :- s/Keyword] #{{keyword true} {keyword false}})
 
 (s/defn creek :- s/Bool
-  [from :- Pos, vec :- PawnCapVec] (and (< (rank from) 3)
-                                        (or (and (:plusfile vec) (= (mod (file from) 8) 7))
-                                            (and (not (:plusfile vec)) (= mod (file from) 8) 0))))
+  ([from :- Pos, vec :- PawnCapVec] (and (< (rank from) 3)
+                                         (or (and (:plusfile vec) (= (mod (file from) 8) 7))
+                                             (and (not (:plusfile vec)) (= mod (file from) 8) 0))))
+  ([{from :from :as vec}] (creek (from vec))))
 
 (s/defn wrappedfilevec :- FileAbs ([t :- File, f :- File, wlong :- s/Bool]
                                    (let [diff (- t f)

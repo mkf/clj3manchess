@@ -13,41 +13,48 @@
             [clojure.set :as set]
             [clojure.string :as str]))
 
-(def VecMove {(s/required-key :vec) v/Vec
-              (s/required-key :from) p/Pos
-              (s/required-key :before) st/State})
-
-(def PawnCapVecMove {(s/required-key :vec) v/PawnCapVec
-                     (s/required-key :from) p/Pos
-                     (s/required-key :before) st/State})
-
+;; (def VecMove {(s/required-key :vec) v/Vec
+;;               (s/required-key :from) p/Pos
+;;               (s/required-key :before) st/State})
+(sc/def ::from ::p/pos)
+(sc/def ::to ::p/pos)
+(sc/def ::before ::st/state)
+(sc/def ::vecmove (sc/and ::v/any (sc/keys :req-un [::from ::before])))
+;; (def PawnCapVecMove {(s/required-key :vec) v/PawnCapVec
+;;                      (s/required-key :from) p/Pos
+;;                      (s/required-key :before) st/State})
 (def FromTo {(s/required-key :from) p/Pos
              (s/required-key :to) p/Pos})
-
+(sc/def ::fromto (sc/keys :req-un [::from ::to]))
 (def Desc {(s/required-key :from) p/Pos
            (s/required-key :to) p/Pos
            (s/optional-key :prom) (s/maybe f/PromFigType)})
-
+(sc/def ::desc (sc/keys :req-un [::from ::to] :opt-un [::v/prom]))
 (def DescMove {(s/required-key :from) p/Pos
                (s/required-key :to) p/Pos
                (s/optional-key :prom) (s/maybe f/PromFigType)
                (s/required-key :before) st/State})
+(sc/def ::descmove (sc/and ::desc (sc/keys :req-un [::before])))
+;; (def Move (s/conditional #(contains? % :to) DescMove
+;;                          #(contains? % :vec) VecMove))
+(sc/def ::move (sc/or :desc ::descmove :vec ::vecmove))
 
-(def Move (s/conditional #(contains? % :to) DescMove
-                         #(contains? % :vec) VecMove))
-
-(s/defn to :- p/Pos [move :- Move]
-  (if (and (not (contains? move :vec))
+(s/defn to :- p/Pos [move] ;; :- Move]
+  (if (and (not (sc/valid? ::v/bound move))
            (contains? move :to)) (:to move) (v/bv-to (dissoc move :before))))
+(def m-to to) ;;alias
+(sc/fdef to :args (sc/cat :move ::move) :ret ::p/pos)
 
-(s/defn get-bef-sq :- b/Square [move :- Move, where :- p/Pos]
+(s/defn get-bef-sq :- b/Square [move ;; :- Move
+                                where :- p/Pos]
   (b/getb (:board (:before move)) where))
 
-(s/defn is-the-fig-we-cap-not-ours :- s/Bool [m :- Move]
+(s/defn is-the-fig-we-cap-not-ours :- s/Bool [m] ;; :- Move]
   (not= (:moves-next (:before m))
         (:color (get-bef-sq m (to m)))))
 
-(s/defn can-we-en-passant :- s/Bool [m :- PawnCapVecMove]
+(s/defn can-we-en-passant :- s/Bool [m ;; :- PawnCapVecMove
+                                     ]
   (let [to-sq (get-bef-sq m (to m))
         from-sq (get-bef-sq m (:from m))
         enp-sq (get-bef-sq m (assoc (to m) 0 3))]
@@ -91,7 +98,8 @@
 
 (s/defn initial-impossibilities-check :- (s/maybe InitiallyCheckedImpossibility)
   "checks all initially-checked, ending with :no-promotion and :not-your-move"
-  [m :- VecMove]
+  [m ;; :- VecMove
+   ]
   (cond
     (nil? (get-bef-sq m (:from m))) :nothing-to-move-here
     (and (map? (:vec m)) (= (:type (get-bef-sq m (:from m))) :pawn)
@@ -186,7 +194,8 @@
 (s/defn both-moats-of-a-color :- [(s/one c/Color "left") (s/one c/Color "right")] [col :- c/Color]
   [col (c/next-col col)])
 
-(s/defn after-moats-state :- st/MoatsState [vecmove :- VecMove, after-board :- b/Board]
+(s/defn after-moats-state :- st/MoatsState [vecmove ;; :- VecMove
+                                            , after-board :- b/Board]
   (let [{:keys [vec before from]}   vecmove
         {:keys [moats board alive]} before
         condit                      (and (not (v/is-castvec? vec))
@@ -278,7 +287,8 @@
   [{vec :vec
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
-    :as m} :- VecMove]
+    :as m} ;; :- VecMove
+   ]
   (if-let [impos (initial-impossibilities-check m)]
     impos
     (if-let [to (v/addvec vec from)]
@@ -375,7 +385,8 @@
   [{vec :vec
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
-    :as m} :- VecMove]
+    :as m} ;; :- VecMove
+   ]
   (let [nxtcolmvs (c/next-col moves-next)
         prvcolmvs (c/prev-col moves-next)
         to (v/addvec vec from)
@@ -405,7 +416,8 @@
                                                         [new-king-pos new-rook-pos]))
                                                moves-next alive))) :castling-over-check
                   :else new-state-after))))
-(s/defn after [{vec :vec :as m} :- VecMove]
+(s/defn after [{vec :vec :as m} ;; :- VecMove
+               ]
   (let [sans-check (after-sans-eval-death m)]
     (if-not (map? sans-check) sans-check
             (let [{:keys [board moves-next alive]} sans-check
