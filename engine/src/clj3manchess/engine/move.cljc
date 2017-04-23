@@ -102,6 +102,52 @@
 (def Impossibility (apply s/enum impossibilities))
 (sc/def ::impossibility impossibilities)
 
+(defn figtype-capable? [type m]
+  (case type
+    :pawn (sc/valid? ::v/pawn m)
+    :rook (sc/valid? (sc/and ::v/axis (v/bno :prom)) m)
+    :knight (sc/valid? ::v/knight m)
+    :bishop (sc/valid? (sc/and ::v/diag (v/bno :prom)) m)
+    :queen (sc/valid? (sc/and ::v/cont (v/bno :prom)) m)
+    :king (sc/valid? (sc/or :castling ::v/castling
+                            :cont (sc/and ::v/cont v/one-just-abs (v/bno :prom))) m)))
+
+(defn mult-cont? [type m] (and (#{:rook :bishop :queen} type)
+                               (sc/valid? v/more-than-one-abs m)))
+(defn what [m] (get-bef-sq m (:from m)))
+(def impossibilities-checking-chain
+  [{:set :what :dep [] :f what}
+   {:do :nothing-to-move-here :dep [:what] :f (comp nil? :what)}
+   {:set ::f/type :dep [:what] :f #(type (:what %))}
+   {:do :figtype-incapable :dep [::f/type]
+    :f (fn [{type ::f/type :as m}] (not (figtype-capable? type m)))}
+   {:set ::v/pawncap :dep [::f/type]
+    :f #(and (= (::f/type %) :pawn) (sc/valid? ::v/pawncap %))}
+   {:do :cannot-en-passant :dep [::v/pawncap]
+    :f (fn [{pawncap ::v/pawncap :as m}] (and pawncap (not (can-we-en-passant m))))}
+   {:set ::f/color :dep [:what] :f #(:color (:what %))}
+   {:set :to :dep [] :f to}
+   {:set :tosq :dep [:to] :f #(get-bef-sq % (:to %))}
+   {:set :tosq-color :dep [:tosq] :f #(when-let [tosq (:tosq %)] (:color tosq))}
+   {:do :capturing-own-piece :dep [::f/color :to :tosq :tosq-color] :f #(= (::f/color %) (::tosq-color %))}
+   {:set :more-than-one-abs :dep [::f/type] :f #(mult-cont? (::f/type %) %)}
+   {:do :not-all-empties :dep [] :f #(not (b/check-empties (-> % :before :board)
+                                                           (v/empties-cont-vec % (:from %))))}
+   {:set :castling-valid :dep [] :f (partial sc/valid? ::v/castling)}
+   {:do :no-castling-possibility :dep [:castling-valid] :f #(and (:castling-valid %)
+                                                                 (not ((-> % :before :castling)
+                                                                       {:type (:castling %)
+                                                                        :color (-> % :before :moves-next)})))}
+   {:do :not-all-empties :dep [:castling-valid]
+    :f #(and (:castling-valid %)
+             (not (b/check-empties (-> % :before :board)
+                                   (->> (-> % :before :castling)
+                                        v/castling-empties
+                                        (map (partial + (* 8 (c/segm (-> % :before :moves-next)))))
+                                        (map (fn [x] [0 x]))))))}
+
+   ])
+
 (s/defn new-initial-impossibilities-check :- (s/maybe InitiallyCheckedImpossibility)
   "checks all initially-checked, ending with :no-promotion and :not-your-move"
   [m] ;; :- VecMove]
@@ -110,14 +156,7 @@
     (if-not
      fromsq :nothing-to-move-here
      (let [type (:type fromsq)]
-       (if-not (case type
-                 :pawn (sc/valid? ::v/pawn m)
-                 :rook (sc/valid? (sc/and ::v/axis (v/bno :prom)) m)
-                 :knight (sc/valid? ::v/knight m)
-                 :bishop (sc/valid? (sc/and ::v/diag (v/bno :prom)) m)
-                 :queen (sc/valid? (sc/and ::v/cont (v/bno :prom)) m)
-                 :king (sc/valid? (sc/or :castling ::v/castling
-                                         :cont (sc/and ::v/cont v/one-just-abs (v/bno :prom))) m))
+       (if-not (figtype-capable? type m)
          :figtype-incapable
          (let [pawncap (and (= type :pawn) (sc/valid? ::v/pawncap m))]
            (if (and pawncap (not (can-we-en-passant m))) :cannot-en-passant
@@ -126,8 +165,7 @@
                      tosq (get-bef-sq m to)
                      tosq-color (when tosq (:color tosq))]
                  (if (= our-color tosq-color) :capturing-own-piece
-                     (let [more-than-one-abs (and (#{:rook :bishop :queen} type)
-                                                  (sc/valid? v/more-than-one-abs m))
+                     (let [more-than-one-abs (mult-cont? type m)
                            before (:before m)
                            moves-next (:moves-next before)
                            board (:board before)]
