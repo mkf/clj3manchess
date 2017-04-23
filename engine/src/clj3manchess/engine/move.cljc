@@ -1,7 +1,7 @@
 (ns clj3manchess.engine.move
-  (:require [schema.core :as s]
-            #?(:clj [clojure.spec :as sc]
-               :cljs [cljs.spec :as sc])
+  (:require [schema.core :as sh]
+            #?(:clj [clojure.spec :as s]
+               :cljs [cljs.spec :as s])
             [clj3manchess.engine.state :as st]
             [clj3manchess.engine.vectors :as v :refer [abs]]
             [clj3manchess.engine.pos :as p :refer [rank file]]
@@ -13,49 +13,41 @@
             [clojure.set :as set]
             [clojure.string :as str]))
 
-;; (def VecMove {(s/required-key :vec) v/Vec
-;;               (s/required-key :from) p/Pos
-;;               (s/required-key :before) st/State})
-(sc/def ::from ::p/pos)
-(sc/def ::to ::p/pos)
-(sc/def ::before ::st/state)
-(sc/def ::vecmove (sc/and ::v/bound (sc/keys :req-un [::before])))
-;; (def PawnCapVecMove {(s/required-key :vec) v/PawnCapVec
-;;                      (s/required-key :from) p/Pos
-;;                      (s/required-key :before) st/State})
-(def FromTo {(s/required-key :from) p/Pos
-             (s/required-key :to) p/Pos})
-(sc/def ::fromto (sc/keys :req-un [::from ::to]))
-(def Desc {(s/required-key :from) p/Pos
-           (s/required-key :to) p/Pos
-           (s/optional-key :prom) (s/maybe f/PromFigType)})
-(sc/def ::desc (sc/keys :req-un [::from ::to] :opt-un [::v/prom]))
-(def DescMove {(s/required-key :from) p/Pos
-               (s/required-key :to) p/Pos
-               (s/optional-key :prom) (s/maybe f/PromFigType)
-               (s/required-key :before) st/State})
-(sc/def ::descmove (sc/and ::desc (sc/keys :req-un [::before])))
-;; (def Move (s/conditional #(contains? % :to) DescMove
-;;                          #(contains? % :vec) VecMove))
-(sc/def ::move (sc/or :desc ::descmove :vec ::vecmove))
+(s/def ::from ::p/pos)
+(s/def ::to ::p/pos)
+(s/def ::before ::st/state)
+(s/def ::vecmove (s/and ::v/bound (s/keys :req-un [::before])))
+(def FromTo {(sh/required-key :from) p/Pos
+             (sh/required-key :to) p/Pos})
+(s/def ::fromto (s/keys :req-un [::from ::to]))
+(def Desc {(sh/required-key :from) p/Pos
+           (sh/required-key :to) p/Pos
+           (sh/optional-key :prom) (sh/maybe f/PromFigType)})
+(s/def ::desc (s/keys :req-un [::from ::to] :opt-un [::v/prom]))
+(def DescMove {(sh/required-key :from) p/Pos
+               (sh/required-key :to) p/Pos
+               (sh/optional-key :prom) (sh/maybe f/PromFigType)
+               (sh/required-key :before) st/State})
+(s/def ::descmove (s/and ::desc (s/keys :req-un [::before])))
+(s/def ::move (s/or :desc ::descmove :vec ::vecmove))
 
-(s/defn to :- p/Pos [move] ;; :- Move]
-  (cond (and (not (sc/valid? ::v/any move))
+(sh/defn to :- p/Pos [move] ;; :- Move]
+  (cond (and (not (s/valid? ::v/any move))
            (contains? move :to)) (:to move) (map? move) (v/bv-to move) :else (println "jkljkljkl" move)))
 (def m-to to) ;;alias
-(sc/fdef to :args (sc/cat :move ::move) :ret ::v/addvec-ret)
+(s/fdef to :args (s/cat :move ::move) :ret ::v/addvec-ret)
 
-(s/defn get-bef-sq :- b/Square [move ;; :- Move
+(sh/defn get-bef-sq :- b/Square [move ;; :- Move
                                 where :- p/Pos]
   (b/getb (:board (:before move)) where))
-(sc/fdef get-bef-sq :args (sc/cat :move ::move :where ::p/pos) :ret ::b/sq)
+(s/fdef get-bef-sq :args (s/cat :move ::move :where ::p/pos) :ret ::b/sq)
 
-(s/defn is-the-fig-we-cap-not-ours :- s/Bool [m] ;; :- Move]
+(sh/defn is-the-fig-we-cap-not-ours :- sh/Bool [m] ;; :- Move]
   (not= (:moves-next (:before m))
         (:color (get-bef-sq m (to m)))))
-(sc/fdef is-the-fig-we-cap-not-ours :args (sc/cat :m ::move) :ret boolean?)
+(s/fdef is-the-fig-we-cap-not-ours :args (s/cat :m ::move) :ret boolean?)
 
-(s/defn can-we-en-passant :- s/Bool [m ;; :- PawnCapVecMove
+(sh/defn can-we-en-passant :- sh/Bool [m ;; :- PawnCapVecMove
 ]
   (let [to-sq (get-bef-sq m (to m))
         from-sq (get-bef-sq m (:from m))
@@ -72,7 +64,7 @@
                        ;  :prev (= (c/next-col (:moves-next (:before m)))
                        ;           (:color (get-bef-sq m (assoc (to m) 0 3))))
                        ;  false)
-(sc/fdef can-we-en-passant :args (sc/cat :m (sc/and ::vecmove ::v/pawncap)) :ret boolean?)
+(s/fdef can-we-en-passant :args (s/cat :m (s/and ::vecmove ::v/pawncap)) :ret boolean?)
 
 (def initially-checked-impossibilities #{:figtype-incapable
                                          :nothing-to-move-here
@@ -95,25 +87,25 @@
 (def impossibilities (se/union initially-checked-impossibilities
                                later-checked-impossibilities))
 
-(def InitiallyCheckedImpossibility (apply s/enum initially-checked-impossibilities))
-(sc/def ::initially-checked-impossibility initially-checked-impossibilities)
-(def LaterCheckedImpossibility (apply s/enum later-checked-impossibilities))
-(sc/def ::later-checked-impossibility later-checked-impossibilities)
-(def Impossibility (apply s/enum impossibilities))
-(sc/def ::impossibility impossibilities)
+(def InitiallyCheckedImpossibility (apply sh/enum initially-checked-impossibilities))
+(s/def ::initially-checked-impossibility initially-checked-impossibilities)
+(def LaterCheckedImpossibility (apply sh/enum later-checked-impossibilities))
+(s/def ::later-checked-impossibility later-checked-impossibilities)
+(def Impossibility (apply sh/enum impossibilities))
+(s/def ::impossibility impossibilities)
 
 (defn figtype-capable? [type m]
   (case type
-    :pawn (sc/valid? ::v/pawn m)
-    :rook (sc/valid? (sc/and ::v/axis (v/bno :prom)) m)
-    :knight (sc/valid? ::v/knight m)
-    :bishop (sc/valid? (sc/and ::v/diag (v/bno :prom)) m)
-    :queen (sc/valid? (sc/and ::v/cont (v/bno :prom)) m)
-    :king (sc/valid? (sc/or :castling ::v/castling
-                            :cont (sc/and ::v/cont v/one-just-abs (v/bno :prom))) m)))
+    :pawn (s/valid? ::v/pawn m)
+    :rook (s/valid? (s/and ::v/axis (v/bno :prom)) m)
+    :knight (s/valid? ::v/knight m)
+    :bishop (s/valid? (s/and ::v/diag (v/bno :prom)) m)
+    :queen (s/valid? (s/and ::v/cont (v/bno :prom)) m)
+    :king (s/valid? (s/or :castling ::v/castling
+                            :cont (s/and ::v/cont v/one-just-abs (v/bno :prom))) m)))
 
 (defn mult-cont? [type m] (and (#{:rook :bishop :queen} type)
-                               (sc/valid? v/more-than-one-abs m)))
+                               (s/valid? v/more-than-one-abs m)))
 (defn what [m] (get-bef-sq m (:from m)))
 (def initial-impossibilities-chain
   [{:set :what :dep [] :f what}
@@ -122,7 +114,7 @@
    {:do :figtype-incapable :dep [::f/type]
     :f  (fn [{type ::f/type :as m}] (not (figtype-capable? type m)))}
    {:set ::v/pawncap :dep [::f/type]
-    :f   #(and (= (::f/type %) :pawn) (sc/valid? ::v/pawncap %))}
+    :f   #(and (= (::f/type %) :pawn) (s/valid? ::v/pawncap %))}
    {:do :cannot-en-passant :dep [::v/pawncap]
     :f  (fn [{pawncap ::v/pawncap :as m}] (and pawncap (not (can-we-en-passant m))))}
    {:set ::f/color :dep [:what] :f #(:color (:what %))}
@@ -134,7 +126,7 @@
    {:set :more-than-one-abs :dep [::f/type] :f #(mult-cont? (::f/type %) %)}
    {:do :not-all-empties :dep [] :f #(not (b/check-empties (-> % :before :board)
                                                            (v/empties-cont-vec % (:from %))))}
-   {:set :castling-valid :dep [] :f (partial sc/valid? ::v/castling)}
+   {:set :castling-valid :dep [] :f (partial s/valid? ::v/castling)}
    {:do :no-castling-possibility :dep [:castling-valid] :f #(and (:castling-valid %)
                                                                  (not ((-> % :before :castling)
                                                                        {:type  (:castling %)
@@ -155,7 +147,7 @@
    {:do :passing-unbridged-moats :dep [:moats-vec] :f #(when-let [unbridged (not-empty (-> % :before :moats))]
                                                          (some unbridged (:moats-vec %)))}
    {:set ::v/pawncont :dep [::v/pawncap] :f #(or (::v/pawncap %) (and (= ((::f/type %) :pawn)
-                                                                         (sc/valid? ::v/pawncont %))))}
+                                                                         (s/valid? ::v/pawncont %))))}
    {:do :wrong-pawn-direction :dep [::v/pawncont :what] :f #(and (::v/pawncont %)
                                                                  (= (:inward %) (:crossed-center (:what %))))}
    {:do :no-promotion :dep [::v/pawncont :to] :f #(and (::v/pawncont %) (= (p/rank (:to %)))
@@ -176,7 +168,7 @@
   "checks all initially-checked, ending with :no-promotion and :not-your-move"
   (impos-chain (comp keyword? :impossibility) initial-impossibilities-chain))
 
-(s/defn board-after-pawn-cap :- b/Board [bef :- b/Board,
+(sh/defn board-after-pawn-cap :- b/Board [bef :- b/Board,
                                          from :- p/Pos, to :- p/Pos,
                                          ep :- st/EnPassant]
   (let [we (b/getb bef from)]
@@ -192,7 +184,7 @@
     (-> bef (b/clr from)
         (b/put to {:type :pawn :color color :crossed-center true}))))
 
-(s/defn board-after-pawn-prom :- b/Board [bef :- b/Board,
+(sh/defn board-after-pawn-prom :- b/Board [bef :- b/Board,
                                           from :- p/Pos, to :- p/Pos,
                                           prom :- f/PromFigType]
   (let [color (:color (b/getb bef from))]
@@ -200,7 +192,7 @@
         (b/clr from)
         (b/put to {:type prom :color color}))))
 
-(s/defn board-after-castling :- b/Board [bef :- b/Board,
+(sh/defn board-after-castling :- b/Board [bef :- b/Board,
                                          color :- c/Color, castling :- ca/CastlingType]
   (let [color-segm*8 (* 8 (c/segm color))
         kfm-on-segm (+ p/kfm color-segm*8)
@@ -219,21 +211,21 @@
         (b/put [0 new-rook-pos] {:type :rook :color color})
         (b/put [0 new-king-pos] {:type :king :color color}))))
 
-(s/defn both-sides-of-a-color-unbridged :- s/Bool [m :- st/MoatsState, col :- c/Color]
+(sh/defn both-sides-of-a-color-unbridged :- sh/Bool [m :- st/MoatsState, col :- c/Color]
   (and (m col)
        (m (c/next-col col))))
 
-(s/defn any-side-of-a-color-unbridged :- s/Bool [m :- st/MoatsState, col :- c/Color]
+(sh/defn any-side-of-a-color-unbridged :- sh/Bool [m :- st/MoatsState, col :- c/Color]
   (or (m col)
       (m (c/next-col col))))
 
-(s/defn both-sides-of-a-color-bridged :- s/Bool [m :- st/MoatsState, col :- c/Color]
+(sh/defn both-sides-of-a-color-bridged :- sh/Bool [m :- st/MoatsState, col :- c/Color]
   (not (any-side-of-a-color-unbridged m col)))
 
-(s/defn both-moats-of-a-color :- [(s/one c/Color "left") (s/one c/Color "right")] [col :- c/Color]
+(sh/defn both-moats-of-a-color :- [(sh/one c/Color "left") (sh/one c/Color "right")] [col :- c/Color]
   [col (c/next-col col)])
 
-(s/defn after-moats-state :- st/MoatsState [vecmove ;; :- VecMove
+(sh/defn after-moats-state :- st/MoatsState [vecmove ;; :- VecMove
                                             , after-board :- b/Board]
   (let [{:keys [vec before from]}   vecmove
         {:keys [moats board alive]} before
@@ -258,7 +250,7 @@
                                              res))))
                          (rest left)))))))
 
-(s/defn is-there-a-threat-with-these-vecs :- s/Bool
+(sh/defn is-there-a-threat-with-these-vecs :- sh/Bool
   [this :- b/Board, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant, vecs :- [v/Vec]]
   (let [our-before {:board         this
                     :moats         #{:white :gray :black}
@@ -271,17 +263,17 @@
          (some #(let [mov   {:from from :vec % :before our-before}
                       impos (initial-impossibilities-check mov)]
                   (and (boolean (those-not-disqualifying-threat impos))
-                       (sc/valid? ::v/bound mov)))))))
-(s/defn is-there-a-threat :- s/Bool
+                       (s/valid? ::v/bound mov)))))))
+(sh/defn is-there-a-threat :- sh/Bool
   ([this :- b/Board, to :- p/Pos, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
    (if-let [fromsq (b/getb this from)]
      (is-there-a-threat this to from alive ep (:type fromsq))))
   ([this :- b/Board, to :- p/Pos, from :- p/Pos, alive :- st/Alive, ep :- st/EnPassant, ft :- f/FigType]
    (let [vecs-seq ((v/vecft (v/tvec ft)) from to)
-         vecs-seq (if-not (sc/valid? ::v/any vecs-seq) vecs-seq #{vecs-seq})]
+         vecs-seq (if-not (s/valid? ::v/any vecs-seq) vecs-seq #{vecs-seq})]
      (is-there-a-threat-with-these-vecs this from alive ep vecs-seq))))
 
-(s/defn are-we-initiating-a-check-thru-moat :- s/Bool [vec from to who alive ep b]
+(sh/defn are-we-initiating-a-check-thru-moat :- sh/Bool [vec from to who alive ep b]
   (and (not (cond (v/is-filevec? vec) (empty? (v/moats-file-vec from (abs vec) (:plusfile vec)))
                   (v/is-diagvec? vec) (nil? (v/moat-diag-vec from to (:plusfile vec)))
                   (v/is-knights? vec) (nil? (v/moat-knight-vec from to))
@@ -292,7 +284,7 @@
 (defonce queenside-rook-pos (v/castling-bef-rook-pos :queenside))
 (defonce kingside-rook-pos (v/castling-bef-rook-pos :kingside))
 
-(s/defn after-castling :- ca/CastlingPossibilities [bef-cas :- ca/CastlingPossibilities
+(sh/defn after-castling :- ca/CastlingPossibilities [bef-cas :- ca/CastlingPossibilities
                                                     who :- c/Color
                                                     ft :- f/FigType
                                                     from :- p/Pos, to :- p/Pos]
@@ -323,8 +315,8 @@
   (if (v/is-pawnlongjumpvec? vec)
     (after-en-passant-something ep (p/file from))
     (after-en-passant-nothing ep)))
-(def StateOrImpossibility (s/conditional keyword? Impossibility :else st/State))
-(s/defn after-sans-eval-death-and-check :- StateOrImpossibility
+(def StateOrImpossibility (sh/conditional keyword? Impossibility :else st/State))
+(defn after-sans-eval-death-and-check ;;:- StateOrImpossibility
   [{
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
@@ -333,7 +325,7 @@
   (if-let [impos (initial-impossibilities-check m)]
     impos
     (if-let [to (v/addvec m from)]
-      (if-not (vector? to) (assert (vector? to))
+      (if (= to ::v/addition-error) to
         (let [what (b/getb board from)
              tosq (b/getb board to)
              whatype (:type what)
@@ -352,12 +344,7 @@
                                      (not (nil? tosq))) 0 (inc halfmoveclock))
               :fullmovenumber (inc fullmovenumber)
               :alive alive})))) (println m from))))
-(defn new-after-sans-eval-death-and-check
-  [{[from-rank from-file :as from] :from
-    {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
-    impossib :impossibility
-    :as m}] nil)
-
+(s/fdef after-sans-eval-death-and-check ::args (sh/cat :m ::vecmove))
 (defonce AMFT (->> p/all-pos
                    (map (fn [from] [from (->> p/all-pos
                                               (filter (complement #(or (= from %)
@@ -378,7 +365,7 @@
 (defn testing-tostring-amft [pos vfile]
   (testing-tostring-amft-or-sth vfile (AMFT pos)))
 
-(s/defn can-i-move-wo-check :- s/Bool
+(sh/defn can-i-move-wo-check :- sh/Bool
   ([sta :- st/State, who :- c/Color]
    (some #(can-i-move-wo-check sta who %) (b/where-are-figs-of-color (:board sta) who)))
   ([sta who from] (let [type-of-fig-there (:type (b/getb (:board sta) from))
@@ -387,7 +374,7 @@
                                                               (some (AMFT from)))))
   ([sta who from vecft to] (when-not (nil? to)
                              (let [vecft (vecft from to)
-                                   vecft (if (and (coll? vecft) (not (sc/valid? ::v/any vecft))) vecft #{vecft})]
+                                   vecft (if (and (coll? vecft) (not (s/valid? ::v/any vecft))) vecft #{vecft})]
                                (->> vecft
                                     (some #(can-i-move-wo-check sta who from vecft to %))
                                     (when-not (->> vecft
@@ -400,7 +387,7 @@
                                       just-ok-impos (#{:not-your-move :no-promotion} afterr)]
                                   (and not-nil (or not-impos just-ok-impos)))))
 
-(s/defn eval-death :- st/State [sta :- st/State]
+(sh/defn eval-death :- st/State [sta :- st/State]
   (let [;; noking (-> (partial contains? (b/where-are-kings (:board sta)))
         ;;            complement
         ;;            (filter c/colors)
@@ -419,7 +406,7 @@
                 set
                 (set/difference died)
                 set))))
-(s/defn threat-checking :- [p/Pos] [board :- b/Board, where :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
+(sh/defn threat-checking :- [p/Pos] [board :- b/Board, where :- p/Pos, alive :- st/Alive, ep :- st/EnPassant]
   (let [who (:color (b/getb board where))]
     (->> p/all-pos
          (map #(if-let [tjf (b/getb board %)]
@@ -427,10 +414,23 @@
                             (alive (:color tjf))
                             (is-there-a-threat board % alive ep (:type tjf))) %)))
          (filter identity))))
-(s/defn check-checking :- [p/Pos] [board :- b/Board, who :- c/Color, alive :- st/Alive]
+(sh/defn check-checking :- [p/Pos] [board :- b/Board, who :- c/Color, alive :- st/Alive]
   (when (alive who) (if-let [king-pos (b/where-is-king board who)]
                       (threat-checking board king-pos alive {}))))
-(s/defn after-sans-eval-death :- StateOrImpossibility
+(defn new-king-pos-and-new-rook-pos [color castling]
+  (let [color-segm*8 (* 8 (c/segm color))
+        kfm-on-segm (+ p/kfm color-segm*8)
+        castling-sgnf (castling v/castling-file-diff-sgnf)
+        new-king-pos (-> kfm-on-segm
+                         (+ 2)
+                         (mod 24))
+        new-rook-pos (-> kfm-on-segm
+                         (+ 1)
+                         (mod 24))
+        new-king-pos [0 new-king-pos]
+        new-rook-pos [0 new-rook-pos]]
+    [new-king-pos new-rook-pos]))
+(defn after-sans-eval-death ;;:- StateOrImpossibility
   [{
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
@@ -438,34 +438,22 @@
 ]
   (let [nxtcolmvs (c/next-col moves-next)
         prvcolmvs (c/prev-col moves-next)
-        to (v/addvec m from)
-        what (b/getb board from)
-        tosq (b/getb board to)
-        whatype (:type what)
-        {:as new-state-after
-         new-board :board
-         new-en-passant :en-passant} (after-sans-eval-death-and-check m)]
-    (if-not (v/is-castvec? m) new-state-after
-            (cond (not (empty? (check-checking board moves-next alive))) :castling-over-check
-                  (not (empty? (check-checking new-board moves-next alive))) :we-in-check
-                  (not (empty? (check-checking (apply (partial b/mov new-board)
-                                                      (let [color moves-next
-                                                            color-segm*8 (* 8 (c/segm color))
-                                                            kfm-on-segm (+ p/kfm color-segm*8)
-                                                            castling (:castling m)
-                                                            castling-sgnf (castling v/castling-file-diff-sgnf)
-                                                            new-king-pos (-> kfm-on-segm
-                                                                             (+ 2)
-                                                                             (mod 24))
-                                                            new-rook-pos (-> kfm-on-segm
-                                                                             (+ 1)
-                                                                             (mod 24))
-                                                            new-king-pos [0 new-king-pos]
-                                                            new-rook-pos [0 new-rook-pos]]
-                                                        [new-king-pos new-rook-pos]))
-                                               moves-next alive))) :castling-over-check
-                  :else new-state-after))))
-(s/defn after [m ;; :- VecMove
+        to (v/addvec m from)]
+    (if (= ::v/addition-error to) to
+      (let [what (b/getb board from)
+           tosq (b/getb board to)
+           whatype (:type what)
+           {:as new-state-after
+            new-board :board
+            new-en-passant :en-passant} (after-sans-eval-death-and-check m)]
+       (if-not (v/is-castvec? m) new-state-after
+               (cond (not (empty? (check-checking board moves-next alive))) :castling-over-check
+                     (not (empty? (check-checking new-board moves-next alive))) :we-in-check
+                     (not (empty? (check-checking (apply (partial b/mov new-board)
+                                                         (new-king-pos-and-new-rook-pos moves-next (:castling m)))
+                                                  moves-next alive))) :castling-over-check
+                     :else new-state-after))))))
+(sh/defn after [m ;; :- VecMove
 ]
   (let [sans-check (after-sans-eval-death m)]
     (if-not (map? sans-check) sans-check
@@ -473,9 +461,9 @@
                   we (c/prev-col moves-next)]
               (if-not (empty? (check-checking board we alive)) :we-in-check
                       (eval-death sans-check))))))
-(s/defn generate-vecs ; :- #{BoundVec}
+(sh/defn generate-vecs ; :- #{BoundVec}
   ([figtype :- f/FigType
-    {:keys [from prom] [rank-to :as to] :to :as ftp}] ;;:- (s/either Desc DescMove)]
+    {:keys [from prom] [rank-to :as to] :to :as ftp}] ;;:- (sh/either Desc DescMove)]
    (->> ((v/vecft (v/tvec figtype)) from to)
         (#(cond (nil? %) #{} (or (= :pawnlongjump %) (map? %)) #{%} :else %))
         (map (if (and (= figtype :pawn)
