@@ -62,6 +62,7 @@
 (def RankVec {(s/required-key :inward) s/Bool
               (s/optional-key :abs)    RankAbs})
 (defn rank-friendly-abs [x] (not (and (contains? x :abs) (<= 12 (:abs x)))))
+(def more-than-one-abs (sc/and #(contains? % :abs) #(< 1 (:abs %))))
 (defn one-just-abs [x] (not (and (contains? x :abs) (< 1 (:abs x)))))
 (defn one-if-prom [x] (not (and (contains? x :prom) (not (nil? (:prom x))) (not (one-just-abs x)))))
 (sc/def ::prom (sc/nilable f/promfigtypes))
@@ -405,7 +406,9 @@
                                (if (> to-rank-dir 5)
                                  [(- 11 to-rank-dir) (mod (+ (file from) 12) 24)]
                                  [to-rank-dir (file from)]))
-                             :else [(- (rank from) abs) (file from)])))
+                             :else (let [to-rank (- (rank from) abs)]
+                                     (if-not (sc/valid? ::p/rank to-rank) ::addition-error
+                                             [to-rank (file from)])))))
 
 (s/defn add-file-vec :- Pos [vec :- FileVec, from :- Pos]
   (let [abs (abs vec)]
@@ -414,14 +417,22 @@
 
 ;addvec returns nil in place of VectorAdditionFailedException
 ;;but how to represent it with schema?
+(sc/def ::addvec-ret (sc/or :pos ::p/pos :err ::addition-err))
 (s/defn addvec :- (s/maybe Pos)
-  [vec :- Vec, from :- Pos] (cond
-                              (is-knights? vec) (add-knight-vec vec from)
-                              (is-castvec? vec) (add-castling-vec vec from)
-                              (is-pawnlongjumpvec? vec) (add-pawnlongjumpvec from)
-                              (is-diagvec? vec) (add-diag-vec vec from)
-                              (is-rankvec? vec) (add-rank-vec vec from)
-                              (is-filevec? vec) (add-file-vec vec from)))
+  ([vec :- Vec, from :- Pos] (let [res (cond
+                                         (is-knights? vec) (add-knight-vec vec from)
+                                         (is-castvec? vec) (add-castling-vec vec from)
+                                         (is-pawnlongjumpvec? vec) (add-pawnlongjumpvec from)
+                                         (is-diagvec? vec) (add-diag-vec vec from)
+                                         (is-rankvec? vec) (add-rank-vec vec from)
+                                         (is-filevec? vec) (add-file-vec vec from))]
+                               (if (sc/valid? ::addvec-ret res) res ::addition-error)))
+  ([bv] (addvec bv (:from bv))))
+(sc/def ::bound (sc/and (sc/keys :req-un [::from]) ::any #(sc/valid? ::p/pos (addvec %))))
+(sc/def ::addition-err #{::addition-error})
+(sc/fdef addvec :args (sc/or :bv (sc/cat :bv ::bound)
+                             :destr (sc/cat :vec ::any :from ::p/pos)) :ret ::addvec-ret)
+(def +v addvec)
 
 (s/defn destinations-of-a-sequence-of-vecs :- [Pos]
   [units-seq :- [Vec], fromp :- Pos]
@@ -444,9 +455,10 @@
 ;; (def BoundVec {(s/required-key :from) Pos
 ;;                (s/required-key :vec)  Vec})
 (sc/def ::from ::p/pos)
-(sc/def ::bound (sc/and (sc/keys :req-un [::from]) ::any))
-(s/defn bv-to :- Pos [bv] (addvec bv (:from bv)))
-(sc/fdef bv-to :args (sc/cat :bv ::bound) :ret ::p/pos)
+(s/defn bv-to :- Pos [bv] (addvec bv))
+(sc/fdef bv-to :args (sc/cat :bv ::bound) :ret ::addvec-ret)
+
+(comment :addition-error)
 
 (s/defn moat-diag-vec :- (s/maybe c/Color) [from :- Pos, to :- Pos, plusfile :- s/Bool]
   (cond (zero? (rank from))
@@ -512,7 +524,7 @@
         (case (mod (file t) 8)
           2 {:castling :queenside}
           6 {:castling :kingside}
-          :default nil)))
+          nil)))
 (s/defn pawnwalk-vecft :- (s/maybe KingRankVec) [f :- Pos t :- Pos]
   (first (filter #(= t (addvec % f))
                  (tfmapset :inward))))
