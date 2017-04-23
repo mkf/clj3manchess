@@ -50,6 +50,10 @@
             (s/required-key :halfmoveclock)  s/Int
             (s/required-key :fullmovenumber) s/Int
             (s/required-key :alive)          Alive})
+(sc/def ::board ::b/any)
+(sc/def ::castling ::ca/possibilities)
+(sc/def ::state (sc/keys :req-un [::board ::moats ::moves-next ::castling ::en-passant
+                                  ::halfmoveclock ::fullmovenumber ::alive]))
 (defonce newgame {:board :clj3manchess.engine.board/newgame
                   :moats moats-state-on-newgame
                   :moves-next :white
