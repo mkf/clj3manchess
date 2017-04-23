@@ -510,38 +510,43 @@
                                              (and (not (:plusfile vec)) (= mod (file from) 8) 0))))
   ([{from :from :as vec}] (creek (from vec))))
 
-(s/defn wrappedfilevec :- FileAbs ([t :- File, f :- File, wlong :- s/Bool]
+(defn wrappedfilevec ([t f wlong]
                                    (let [diff (- t f)
                                          sgnf (if (neg? diff) - +)]
                                      (if (= wlong (< 12 (sgnf diff)))
                                        diff
                                        (- diff (sgnf 24)))))
-  ([t :- File, f :- File] (wrappedfilevec t f false)))
+  ([t f] (wrappedfilevec t f false)))
 
-(s/defn castling-vecft :- (s/maybe CastlingVec) [f :- Pos t :- Pos]
+(defn castling-vecft [f t]
   (cond (and (= (rank f) 0 (rank t))
              (= (mod (file f) 8) kfm))
         (case (mod (file t) 8)
           2 {:castling :queenside}
           6 {:castling :kingside}
           nil)))
-(s/defn pawnwalk-vecft :- (s/maybe KingRankVec) [f :- Pos t :- Pos]
+(sc/fdef castling-vecft :args (sc/cat :f ::from :t ::to) :ret (sc/nilable ::castling))
+(defn pawnwalk-vecft [f t]
   (first (filter #(= t (addvec % f))
                  (tfmapset :inward))))
-(s/defn pawnlongjump-vecft :- (s/maybe PawnLongJumpVec) [f :- Pos t :- Pos]
-  (cond (and (= (rank f) 1) (= (rank t) 3)
+(sc/fdef pawnwalk-vecft :args (sc/cat :f ::from :t ::to) :ret (sc/nilable (sc/and ::pawnwalk (bno :prom))))
+(defn pawnlongjump-vecft [f t]
+  (when (and (= (rank f) 1) (= (rank t) 3)
              (= (file f) (file t))) ;; :pawnlongjump
         {:pawnlongjump true}))
-(s/defn pawncap-vecft :- (s/maybe KingDiagVec) [f :- Pos, t :- Pos]
+(sc/fdef pawnlongjump-vecft :args (sc/cat :f ::from :t ::to) :ret (sc/nilable ::pawnlongjump))
+(defn pawncap-vecft [f t]
   (first (filter #(and (not (creek f %))
                        (= t (addvec % f)))
                  (set/join (tfmapset :inward)
                            (tfmapset :plusfile)))))
-(s/defn pawn-vecft :- (s/maybe PawnVec) [f :- Pos, t :- Pos]
+(sc/fdef pawncap-vecft :args (sc/cat :f ::from :t ::to) :ret (sc/nilable (sc/and ::pawncap (bno :prom))))
+(defn pawn-vecft [f t]
   (first (filter (complement nil?) [(pawnwalk-vecft f t)
                                     (pawnlongjump-vecft f t)
                                     (pawncap-vecft f t)])))
-(s/defn rank-vecft :- (s/maybe RankVec) [from :- Pos, to :- Pos]
+(sc/fdef pawn-vecft :args (sc/cat :f ::from :t ::to) :ret (sc/nilable (sc/and ::pawn (bno :prom))))
+(defn rank-vecft [from to]
   (cond (same-or-opposite-file from to)
         (let [t (if (same-file from to)
                   (- (rank to) (rank from))
@@ -551,38 +556,45 @@
           (cond (= 1 abs) {:inward inward}
                 (not (= 0 abs))
                 {:inward inward :abs abs}))))
-(s/defn file-vecft :- (s/maybe FileVec) [from :- Pos, to :- Pos]
-  (filter (complement nil?)
-          (sort-by :abs
-                   (let [diff (- (file to) (file from))
-                         plusfile (< 0 diff)
-                         absdiff
-                         (if plusfile diff (- diff))]
-                     (cond (and (= (rank to) (rank from))
-                                (not (= 0 absdiff))
-                                (> 24 absdiff))
-                           [{:plusfile plusfile
-                             :abs absdiff}
-                            {:plusfile (not plusfile)
-                             :abs (- 24 absdiff)}])))))
-(s/defn knight-vecft :- (s/maybe KnightVec) [fromp :- Pos, top :- Pos]
+(sc/fdef rank-vecft :args (sc/cat :from ::from :to ::to) :ret (sc/nilable (sc/and ::rank (bno :prom))))
+(defn file-vecft [from to]
+  (not-empty (vec (filter (complement nil?)
+                      (sort-by :abs
+                               (let [diff (- (file to) (file from))
+                                     plusfile (< 0 diff)
+                                     absdiff (if plusfile diff (- diff))]
+                                 (when (and (= (rank to) (rank from))
+                                            (not (= 0 absdiff))
+                                            (> 24 absdiff))
+                                   [{:plusfile plusfile
+                                     :abs absdiff}
+                                    {:plusfile (not plusfile)
+                                     :abs (- 24 absdiff)}])))))))
+(sc/fdef file-vecft :args (sc/cat :from ::from :to ::to) :ret (sc/nilable (sc/tuple (sc/and ::file #(<= (:abs %) 12))
+                                                                                   (sc/and ::file #(>= (:abs %) 12)))))
+(defn knight-vecft [fromp top]
   (first
    (filter #(= top (addvec % fromp))
            (set/join (set/join (tfmapset :inward)
                                (tfmapset :plusfile))
                      (tfmapset :centeronecloser)))))
-(s/defn kingcont-vecft :- (s/maybe KingContVec) [from :- Pos, to :- Pos]
+(sc/fdef knight-vecft :args (sc/cat :fromp ::from :top ::to) :ret (sc/nilable ::knight))
+(defn kingcont-vecft [from to]
   (first
    (filter #(= to (addvec % from))
            (set/union (tfmapset :inward)
                       (tfmapset :plusfile)
                       (set/join (tfmapset :inward)
                                 (tfmapset :plusfile))))))
-(s/defn king-vecft :- (s/maybe KingVec) [from :- Pos, to :- Pos]
+(sc/fdef kingcont-vecft :args (sc/cat :from ::from :to ::to) :ret (sc/nilable (sc/and ::cont (bno :prom) one-just-abs)))
+(defn king-vecft [from to]
   (first (filter (complement nil?)
                  [(castling-vecft from to)
                   (kingcont-vecft from to)])))
-(s/defn diag-vecft :- (s/maybe DiagVec) [from :- Pos, to :- Pos]
+(sc/fdef king-vecft :args (sc/cat :from ::from :to ::to) :ret (sc/nilable
+                                                              (sc/or :cont (sc/and ::cont (bno :prom) one-just-abs)
+                                                                     :cast ::castling)))
+(defn diag-vecft [from to]
   (let [filediff (wrappedfilevec (file from) (file to))
         plusfile (> filediff 0)
         absfilediff (if plusfile filediff (- filediff))
@@ -602,11 +614,13 @@
                :inward true
                :plusfile (not plusfile)})]
     (filter (complement nil?) [ser ler])))
-(s/defn axis-vecft :- (s/maybe AxisVec) [from :- Pos, to :- Pos]
+(sc/fdef diag-vecft :args (sc/cat :from ::from :to ::to)
+         :ret (sc/coll-of (sc/and ::diag (bno :prom)) :kind sequential? :max-count 2 :distinct true))
+(defn axis-vecft [from to]
   (set/union (set/select (complement nil?)
                          #{(rank-vecft from to)})
              (file-vecft from to)))
-(s/defn cont-vecft :- (s/maybe ContVecNoProm) [from :- Pos, to :- Pos]
+(defn cont-vecft [from to]
   (set/union (axis-vecft from to)
              (diag-vecft from to)))
 

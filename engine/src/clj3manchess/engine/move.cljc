@@ -163,7 +163,7 @@
    {:do :not-your-move :dep [::f/color] :f #(not= (-> % :before :moves-next) (::f/color %))}])
 (defn impos-chain [impos-pred the-chain]
   #(loop [cur % cha the-chain]
-     (if (empty? cha) (when (impos-pred cur) cur)
+     (if (empty? cha) (if (impos-pred cur) (:impossibility cur) cur)
          (let [tha (first cha)
                       thkind (cond (contains? tha :set) :set
                                    (contains? tha :do) :do)
@@ -171,10 +171,10 @@
                       thfun (:f tha)]
                   (case thkind
                     :set (recur (assoc cur thres (thfun cur)) (rest cha))
-                    :do (if (thfun cur) thres (recur cur (rest cha))))))))
+                    :do (if (thfun cur) (assoc cur :impossibility thres) (recur cur (rest cha))))))))
 (def initial-impossibilities-check
   "checks all initially-checked, ending with :no-promotion and :not-your-move"
-  (impos-chain keyword? initial-impossibilities-chain))
+  (impos-chain (comp keyword? :impossibility) initial-impossibilities-chain))
 
 (s/defn board-after-pawn-cap :- b/Board [bef :- b/Board,
                                          from :- p/Pos, to :- p/Pos,
