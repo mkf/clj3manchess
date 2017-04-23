@@ -18,3 +18,7 @@
 
 (t/deftest newgame-where-are-bishops []
   (t/is (b/where-are-figs-of-type ::b/newgame :bishop) '([0 2] [0 5] [0 10] [0 13] [0 18] [0 21])))
+
+(t/deftest newgame-figs-white []
+  (t/is (vec (b/where-are-figs-of-color ::b/newgame :white))
+        [[0 0] [0 1] [0 2] [0 3] [0 4] [0 5] [0 6] [0 7] [1 0] [1 1] [1 2] [1 3] [1 4] [1 5] [1 6] [1 7]]))

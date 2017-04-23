@@ -40,8 +40,8 @@
 (sc/def ::move (sc/or :desc ::descmove :vec ::vecmove))
 
 (s/defn to :- p/Pos [move] ;; :- Move]
-  (if (and (not (sc/valid? ::v/any move))
-           (contains? move :to)) (:to move) (v/bv-to move)))
+  (cond (and (not (sc/valid? ::v/any move))
+           (contains? move :to)) (:to move) (map? move) (v/bv-to move) :else (println "jkljkljkl" move)))
 (def m-to to) ;;alias
 (sc/fdef to :args (sc/cat :move ::move) :ret ::v/addvec-ret)
 
@@ -127,6 +127,7 @@
     :f  (fn [{pawncap ::v/pawncap :as m}] (and pawncap (not (can-we-en-passant m))))}
    {:set ::f/color :dep [:what] :f #(:color (:what %))}
    {:set :to :dep [] :f to}
+   {:do ::v/addition-error :def [:to] :f #(= ::v/addition-error (:to %))}
    {:set :tosq :dep [:to] :f #(get-bef-sq % (:to %))}
    {:set :tosq-color :dep [:tosq] :f #(when-let [tosq (:tosq %)] (:color tosq))}
    {:do :capturing-own-piece :dep [::f/color :to :tosq :tosq-color] :f #(= (::f/color %) (::tosq-color %))}
@@ -324,32 +325,33 @@
     (after-en-passant-nothing ep)))
 (def StateOrImpossibility (s/conditional keyword? Impossibility :else st/State))
 (s/defn after-sans-eval-death-and-check :- StateOrImpossibility
-  [{vec :vec
+  [{
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
     :as m} ;; :- VecMove
 ]
   (if-let [impos (initial-impossibilities-check m)]
     impos
-    (if-let [to (v/addvec vec from)]
-      (let [what (b/getb board from)
-            tosq (b/getb board to)
-            whatype (:type what)
-            new-board (asedac-new-board vec board moves-next whatype from to en-passant)
-            new-en-passant (after-en-passant en-passant vec from)]
-        (if (are-we-initiating-a-check-thru-moat vec from to moves-next alive new-en-passant new-board)
-          :initiating-check-thru-moats
-          (let [nxtcolmvs (c/next-col moves-next)
-                prvcolmvs (c/prev-col moves-next)]
-            {:board new-board
-             :moats (after-moats-state m new-board)
-             :moves-next (if (alive nxtcolmvs) nxtcolmvs prvcolmvs)
-             :castling (after-castling castling moves-next whatype from to)
-             :en-passant new-en-passant
-             :halfmoveclock (if (or (= whatype :pawn)
-                                    (not (nil? tosq))) 0 (inc halfmoveclock))
-             :fullmovenumber (inc fullmovenumber)
-             :alive alive}))) (println vec from))))
+    (if-let [to (v/addvec m from)]
+      (if-not (vector? to) (assert (vector? to))
+        (let [what (b/getb board from)
+             tosq (b/getb board to)
+             whatype (:type what)
+             new-board (asedac-new-board m board moves-next whatype from to en-passant)
+             new-en-passant (after-en-passant en-passant m from)]
+         (if (are-we-initiating-a-check-thru-moat m from to moves-next alive new-en-passant new-board)
+           :initiating-check-thru-moats
+           (let [nxtcolmvs (c/next-col moves-next)
+                 prvcolmvs (c/prev-col moves-next)]
+             {:board new-board
+              :moats (after-moats-state m new-board)
+              :moves-next (if (alive nxtcolmvs) nxtcolmvs prvcolmvs)
+              :castling (after-castling castling moves-next whatype from to)
+              :en-passant new-en-passant
+              :halfmoveclock (if (or (= whatype :pawn)
+                                     (not (nil? tosq))) 0 (inc halfmoveclock))
+              :fullmovenumber (inc fullmovenumber)
+              :alive alive})))) (println m from))))
 
 (defonce AMFT (->> p/all-pos
                    (map (fn [from] [from (->> p/all-pos
@@ -387,7 +389,7 @@
                                                    (filter (complement nil?))
                                                    empty?))))))
   ([sta who from vecft to vect] (let [afterr        (after-sans-eval-death-and-check
-                                                     {:vec vect :before sta :from from})
+                                                     (assoc vect :before sta :from from))
                                       not-nil       (not (nil? afterr))
                                       not-impos     (not (impossibilities afterr))
                                       just-ok-impos (#{:not-your-move :no-promotion} afterr)]
@@ -424,28 +426,28 @@
   (when (alive who) (if-let [king-pos (b/where-is-king board who)]
                       (threat-checking board king-pos alive {}))))
 (s/defn after-sans-eval-death :- StateOrImpossibility
-  [{vec :vec
+  [{
     [from-rank from-file :as from] :from
     {:keys [board moats moves-next castling en-passant halfmoveclock fullmovenumber alive] :as before} :before
     :as m} ;; :- VecMove
 ]
   (let [nxtcolmvs (c/next-col moves-next)
         prvcolmvs (c/prev-col moves-next)
-        to (v/addvec vec from)
+        to (v/addvec m from)
         what (b/getb board from)
         tosq (b/getb board to)
         whatype (:type what)
         {:as new-state-after
          new-board :board
          new-en-passant :en-passant} (after-sans-eval-death-and-check m)]
-    (if-not (v/is-castvec? vec) new-state-after
+    (if-not (v/is-castvec? m) new-state-after
             (cond (not (empty? (check-checking board moves-next alive))) :castling-over-check
                   (not (empty? (check-checking new-board moves-next alive))) :we-in-check
                   (not (empty? (check-checking (apply (partial b/mov new-board)
                                                       (let [color moves-next
                                                             color-segm*8 (* 8 (c/segm color))
                                                             kfm-on-segm (+ p/kfm color-segm*8)
-                                                            castling (:castling vec)
+                                                            castling (:castling m)
                                                             castling-sgnf (castling v/castling-file-diff-sgnf)
                                                             new-king-pos (-> kfm-on-segm
                                                                              (+ 2)
@@ -458,7 +460,7 @@
                                                         [new-king-pos new-rook-pos]))
                                                moves-next alive))) :castling-over-check
                   :else new-state-after))))
-(s/defn after [{vec :vec :as m} ;; :- VecMove
+(s/defn after [m ;; :- VecMove
 ]
   (let [sans-check (after-sans-eval-death m)]
     (if-not (map? sans-check) sans-check

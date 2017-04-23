@@ -16,7 +16,8 @@ X_______X_______X___X___
 ________X________X__X__X
 ________X_________XXXXX_
 ________X_________XXXXX_
-XXXXXXXXXXXXXXXXXXXX_XXX")))
+XXXXXXXXXXXXXXXXXXXX_XXX"))
+  (t/is ((sut/AMFT [1 0]) [2 0])))
 
 (t/deftest knight-capturing-thru-moat-newgame []
   (t/is (= (sut/after-of-afters {:before st/newgame :from [0 1] :to [1 23]})
@@ -26,3 +27,12 @@ XXXXXXXXXXXXXXXXXXXX_XXX")))
           to [[0 0] [1 0] [1 23] [0 23] [2 1] [3 5] [2 22] [3 22] [4 5] [3 4] [5 4]]]
     (t/is (= (sut/after-of-afters {:before st/newgame :from from :to to})
              :nothing-to-move-here))))
+(t/deftest can-i-move-wo-check-newgame []
+  (t/is (sut/can-i-move-wo-check st/newgame :white))
+  (t/is (sut/can-i-move-wo-check st/newgame :white [1 0]))
+  (t/is (sut/can-i-move-wo-check st/newgame :white [1 0] {:inward true} [2 0]))
+  (t/is (sut/can-i-move-wo-check st/newgame :white [1 0] {:inward true} [2 0] {:inward true}))
+  (println (sut/after-sans-eval-death-and-check {:inward true :before st/newgame :from [1 0]}))
+  )
+
+(t/run-tests)
