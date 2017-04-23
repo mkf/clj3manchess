@@ -31,24 +31,23 @@
 (s/def ::descmove (s/and ::desc (s/keys :req-un [::before])))
 (s/def ::move (s/or :desc ::descmove :vec ::vecmove))
 
-(sh/defn to :- p/Pos [move] ;; :- Move]
+(defn to [move] ;; :- Move]
   (cond (and (not (s/valid? ::v/any move))
            (contains? move :to)) (:to move) (map? move) (v/bv-to move) :else (println "jkljkljkl" move)))
 (def m-to to) ;;alias
 (s/fdef to :args (s/cat :move ::move) :ret ::v/addvec-ret)
 
-(sh/defn get-bef-sq :- b/Square [move ;; :- Move
-                                where :- p/Pos]
+(defn get-bef-sq [move ;; :- Move
+                                where]
   (b/getb (:board (:before move)) where))
 (s/fdef get-bef-sq :args (s/cat :move ::move :where ::p/pos) :ret ::b/sq)
 
-(sh/defn is-the-fig-we-cap-not-ours :- sh/Bool [m] ;; :- Move]
+(defn is-the-fig-we-cap-not-ours [m] ;; :- Move]
   (not= (:moves-next (:before m))
         (:color (get-bef-sq m (to m)))))
 (s/fdef is-the-fig-we-cap-not-ours :args (s/cat :m ::move) :ret boolean?)
 
-(sh/defn can-we-en-passant :- sh/Bool [m ;; :- PawnCapVecMove
-]
+(defn can-we-en-passant [m]
   (let [to-sq (get-bef-sq m (to m))
         from-sq (get-bef-sq m (:from m))
         enp-sq (get-bef-sq m (assoc (to m) 0 3))]
@@ -168,9 +167,10 @@
   "checks all initially-checked, ending with :no-promotion and :not-your-move"
   (impos-chain (comp keyword? :impossibility) initial-impossibilities-chain))
 
-(sh/defn board-after-pawn-cap :- b/Board [bef :- b/Board,
-                                         from :- p/Pos, to :- p/Pos,
-                                         ep :- st/EnPassant]
+(defn board-after-pawn-cap ;;:- b/Board
+  [bef ;;:- b/Board,
+                                         from to
+                                         ep]
   (let [we (b/getb bef from)]
     (if (and (st/matching-ep ep to (:color we) (:color (b/getb bef [3 (p/file to)])))
              (= (:type (b/getb bef [3 (p/file to)])) :pawn))
@@ -178,6 +178,8 @@
           (b/mov from to)
           (b/clr [3 (p/file to)]))
       (b/mov bef from to))))
+(s/fdef board-after-pawn-cap :args (s/cat :bef ::b/any :from ::from :to ::to :ep ::st/en-passant)
+        :ret ::b/any)
 
 (defn board-after-pawn-center [bef from to]
   (let [color (:color (b/getb bef from))]
