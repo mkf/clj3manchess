@@ -8,6 +8,7 @@
             [clj3manchess.engine.board :as b]))
 
 (stest/instrument `b/getb)
+(stest/instrument `sut/can-i-move-wo-check)
 
 (t/deftest eval-death-rem-king-gray []
   (t/is (= (:alive (eval-death (assoc st/newgame :board [::b/newgame {[0 12] nil}])))

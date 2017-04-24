@@ -367,8 +367,8 @@
 (defn testing-tostring-amft [pos vfile]
   (testing-tostring-amft-or-sth vfile (AMFT pos)))
 
-(sh/defn can-i-move-wo-check :- sh/Bool
-  ([sta :- st/State, who :- c/Color]
+(defn can-i-move-wo-check ;;:- sh/Bool
+  ([sta who]
    (some #(can-i-move-wo-check sta who %) (b/where-are-figs-of-color (:board sta) who)))
   ([sta who from] (let [type-of-fig-there (:type (b/getb (:board sta) from))
                         tvec              (v/tvec type-of-fig-there)
@@ -388,6 +388,21 @@
                                       not-impos     (not (impossibilities afterr))
                                       just-ok-impos (#{:not-your-move :no-promotion} afterr)]
                                   (and not-nil (or not-impos just-ok-impos)))))
+(s/fdef can-i-move-wo-check :args (s/or :exported (s/cat :sta ::st/state :who ::c/color)
+                                        :internal1 (s/cat :sta ::st/state :who ::c/color :from ::from)
+                                        :internal2 (s/cat :sta ::st/state :who ::c/color :from ::from
+                                                          :vecft (s/fspec :args (s/cat :from ::from :to ::to)
+                                                                          :ret (s/coll-of
+                                                                                (s/and ::v/any (v/bno :prom))
+                                                                                :kind set? :max-count 8
+                                                                                :distinct true :into #{})) :to ::to)
+                                        :internal3 (s/cat :sta ::st/state :who ::c/color :from ::from
+                                                          :vecft (s/fspec :args (s/cat :from ::from :to ::to)
+                                                                          :ret (s/coll-of
+                                                                                (s/and ::v/any (v/bno :prom))
+                                                                                :kind set? :max-count 8
+                                                                                :distinct true :into #{})) :to ::to
+                                                          :vect (s/and ::v/any (v/bno :prom)))))
 
 (sh/defn eval-death :- st/State [sta :- st/State]
   (let [;; noking (-> (partial contains? (b/where-are-kings (:board sta)))
