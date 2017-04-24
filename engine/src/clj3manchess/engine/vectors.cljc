@@ -619,10 +619,26 @@
 (defn axis-vecft [from to]
   (set/union (set/select (complement nil?)
                          #{(rank-vecft from to)})
-             (file-vecft from to)))
+             (set (file-vecft from to))))
 (defn cont-vecft [from to]
   (set/union (axis-vecft from to)
-             (diag-vecft from to)))
+             (set (diag-vecft from to))))
+
+(def vecftset {
+               ::axisvec axis-vecft
+               ::castlingvec #(set/select (complement nil?) (castling-vecft %1 %2))
+               ::contvec cont-vecft
+               ::pawnwalkvec #(set/select (complement nil?) (pawnwalk-vecft %1 %2))
+               ::pawnlongjumpvec #(set/select (complement nil?) (pawnlongjump-vecft %1 %2))
+               ::pawncapvec #(set/select (complement nil?) (pawncap-vecft %1 %2))
+               ::pawnvec #(set/select (complement nil?) (pawn-vecft %1 %2))
+               ::rankvec #(set/select (complement nil?) (rank-vecft %1 %2))
+               ::filevec (comp set file-vecft)
+               ::knightvec #(set/select (complement nil?) (knight-vecft %1 %2))
+               ::kingcontvec #(set/select (complement nil?) (kingcont-vecft %1 %2))
+               ::kingvec #(set/select (complement nil?) (king-vecft %1 %2))
+               ::diagvec (comp set diag-vecft)
+               })
 
 (def vecft {::axisvec         axis-vecft
             ::castlingvec     castling-vecft

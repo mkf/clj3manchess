@@ -325,27 +325,27 @@
     :as m} ;; :- VecMove
 ]
   (if-let [impos (initial-impossibilities-check m)]
-    impos
-    (if-let [to (v/addvec m from)]
-      (if (= to ::v/addition-error) to
-        (let [what (b/getb board from)
-             tosq (b/getb board to)
-             whatype (:type what)
-             new-board (asedac-new-board m board moves-next whatype from to en-passant)
-             new-en-passant (after-en-passant en-passant m from)]
-         (if (are-we-initiating-a-check-thru-moat m from to moves-next alive new-en-passant new-board)
-           :initiating-check-thru-moats
-           (let [nxtcolmvs (c/next-col moves-next)
-                 prvcolmvs (c/prev-col moves-next)]
-             {:board new-board
-              :moats (after-moats-state m new-board)
-              :moves-next (if (alive nxtcolmvs) nxtcolmvs prvcolmvs)
-              :castling (after-castling castling moves-next whatype from to)
-              :en-passant new-en-passant
-              :halfmoveclock (if (or (= whatype :pawn)
-                                     (not (nil? tosq))) 0 (inc halfmoveclock))
-              :fullmovenumber (inc fullmovenumber)
-              :alive alive})))) (println m from))))
+    (if-let [impos (:impossibility impos)] impos
+     (if-let [to (v/addvec m from)]
+       (if (= to ::v/addition-error) to
+           (let [what (b/getb board from)
+                 tosq (b/getb board to)
+                 whatype (:type what)
+                 new-board (asedac-new-board m board moves-next whatype from to en-passant)
+                 new-en-passant (after-en-passant en-passant m from)]
+             (if (are-we-initiating-a-check-thru-moat m from to moves-next alive new-en-passant new-board)
+               :initiating-check-thru-moats
+               (let [nxtcolmvs (c/next-col moves-next)
+                     prvcolmvs (c/prev-col moves-next)]
+                 {:board new-board
+                  :moats (after-moats-state m new-board)
+                  :moves-next (if (alive nxtcolmvs) nxtcolmvs prvcolmvs)
+                  :castling (after-castling castling moves-next whatype from to)
+                  :en-passant new-en-passant
+                  :halfmoveclock (if (or (= whatype :pawn)
+                                         (not (nil? tosq))) 0 (inc halfmoveclock))
+                  :fullmovenumber (inc fullmovenumber)
+                  :alive alive})))) (println m from)))))
 (s/fdef after-sans-eval-death-and-check ::args (sh/cat :m ::vecmove))
 (defonce AMFT (->> p/all-pos
                    (map (fn [from] [from (->> p/all-pos
@@ -372,16 +372,16 @@
    (some #(can-i-move-wo-check sta who %) (b/where-are-figs-of-color (:board sta) who)))
   ([sta who from] (let [type-of-fig-there (:type (b/getb (:board sta) from))
                         tvec              (v/tvec type-of-fig-there)
-                        vecft             (v/vecft tvec)] (-> #(can-i-move-wo-check sta who from vecft %)
+                        vecft             (v/vecftset tvec)] (-> #(can-i-move-wo-check sta who from vecft %)
                                                               (some (AMFT from)))))
   ([sta who from vecft to] (when-not (nil? to)
                              (let [vecft (vecft from to)
                                    vecft (if (and (coll? vecft) (not (s/valid? ::v/any vecft))) vecft #{vecft})]
-                               (->> vecft
-                                    (some #(can-i-move-wo-check sta who from vecft to %))
-                                    (when-not (->> vecft
-                                                   (filter (complement nil?))
-                                                   empty?))))))
+                               (when-not (->> vecft
+                                              (filter (complement nil?))
+                                              empty?) (->> vecft
+                                                           (some #(can-i-move-wo-check sta who from vecft to %))
+                                                           )))))
   ([sta who from vecft to vect] (let [afterr        (after-sans-eval-death-and-check
                                                      (assoc vect :before sta :from from))
                                       not-nil       (not (nil? afterr))
