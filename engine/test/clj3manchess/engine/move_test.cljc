@@ -7,6 +7,7 @@
             [clj3manchess.engine.state :as st]
             [clj3manchess.engine.board :as b]))
 
+(stest/instrument `sut/impos-chain)
 (stest/instrument `b/getb)
 (stest/instrument `sut/can-i-move-wo-check)
 

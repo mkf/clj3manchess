@@ -77,8 +77,7 @@
                                          :no-promotion
                                          :wrong-pawn-direction})
 (def those-not-disqualifying-threat #{:no-promotion
-                                      :not-your-move
-                                      nil})
+                                      :not-your-move})
 (def later-checked-impossibilities #{:we-in-check
                                      :castling-passing-thru-check
                                      :castling-starting-with-check
@@ -93,79 +92,89 @@
 (def Impossibility (apply sh/enum impossibilities))
 (s/def ::impossibility impossibilities)
 
-(defn figtype-capable? [type m]
-  (case type
-    :pawn (s/valid? ::v/pawn m)
-    :rook (s/valid? (s/and ::v/axis (v/bno :prom)) m)
-    :knight (s/valid? ::v/knight m)
-    :bishop (s/valid? (s/and ::v/diag (v/bno :prom)) m)
-    :queen (s/valid? (s/and ::v/cont (v/bno :prom)) m)
-    :king (s/valid? (s/or :castling ::v/castling
-                            :cont (s/and ::v/cont v/one-just-abs (v/bno :prom))) m)))
+(defn what [m] (get-bef-sq m (:from m)))
+(defn whatype [m] (-> m what :type))
+(defn figtype-capable?
+  ([type m]
+   (case type
+     :pawn (s/valid? ::v/pawn m)
+     :rook (s/valid? (s/and ::v/axis (v/bno :prom)) m)
+     :knight (s/valid? ::v/knight m)
+     :bishop (s/valid? (s/and ::v/diag (v/bno :prom)) m)
+     :queen (s/valid? (s/and ::v/cont (v/bno :prom)) m)
+     :king (s/valid? (s/or :castling ::v/castling
+                           :cont (s/and ::v/cont v/one-just-abs (v/bno :prom))) m)))
+  ([m] (figtype-capable? (whatype m) m)))
 
 (defn mult-cont? [type m] (and (#{:rook :bishop :queen} type)
                                (s/valid? v/more-than-one-abs m)))
-(defn what [m] (get-bef-sq m (:from m)))
+(defn nothing-to-move-here? [m] (-> m what nil?))
+(defn is-move-figtype-incapable? [m] (not (figtype-capable? m)))
+(defn is-move-a-pawncap? [m] (and (= (whatype m) :pawn) (s/valid? ::v/pawncap m)))
+(defn cannot-we-en-passant? [m] (and (is-move-a-pawncap? m)
+                                     (not (can-we-en-passant m))))
+(defn whacolor [m] (-> m what :color))
+(defn is-there-an-addition-error? [m] (= ::v/addition-error (to m)))
+(defn tosq [m] (get-bef-sq m (to m)))
+(defn tosq-color [m] (when-let [tosq (tosq m)] (:color tosq)))
+(defn is-move-capturing-own-piece? [m] (= (whacolor m) (tosq-color m)))
+(defn more-than-one-abs? [m] (mult-cont? (whatype m) m))
+(defn not-all-empties? [m] (not (b/check-empties (-> m :before :board)
+                                                 (v/empties-cont-vec m (:from m)))))
+(defn is-valid-castling? [m] (s/valid? ::v/castling m))
+(defn is-there-no-castling-possibility? [m] (and (is-valid-castling? m)
+                                               (not ((-> m :before :castling)
+                                                     {:type (:castling m)
+                                                      :color (-> m :before :moves-next)}))))
+(defn are-not-all-empties? [m] (and (is-valid-castling? m)
+                                    (not (b/check-empties (-> m :before :board)
+                                                          (->> (-> m :before :castling)
+                                                               v/castling-empties
+                                                               (map (partial + (* 8 (c/segm (-> m :before :moves-next)))))
+                                                               (map (fn [x] [0 x])))))))
+(defn moats-vec [m]
+  (cond (v/is-filevec? m) (set (v/moats-file-vec (:from m) (abs m) (:plusfile m)))
+        (v/is-diagvec? m) (set (filter identity [(v/moat-diag-vec (:from m) (to m) (:plusfile m))]))
+        (v/is-knights? m) (set (filter identity [(v/moat-knight-vec (:from m) (to m))]))
+        :else #{}))
+(defn is-move-capturing-thru-moats? [m] (and (not (nil? (tosq m))) (not (empty? (moats-vec m)))))
+(defn is-move-passing-unbridged-moats? [m] (when-let [unbridged (not-empty (-> m :before :moats))]
+                                             (some unbridged (moats-vec m))))
+(defn is-move-a-pawncont? [m] (or (is-move-a-pawncap? m) ;;not really needed, supposed to speed up things
+                                  (and (= (whatype m) :pawn)
+                                       (s/valid? ::v/pawncont m))))
+(defn has-move-a-wrong-pawn-direction? [m] (and (is-move-a-pawncont? m)
+                                                (= (:inward m) (:crossed-center (what m)))))
+(defn has-move-a-lack-of-needed-promotion? [m] (and (is-move-a-pawncont? m) (= (p/rank (to m)))
+                                                    (not (f/promfigtypes (:prom m)))))
+(defn has-move-the-wrong-color-moving? [m] (not= (-> m :before :movesnext) (whatype m)))
 (def initial-impossibilities-chain
-  [{:set :what :dep [] :f what}
-   {:do :nothing-to-move-here :dep [:what] :f (comp nil? :what)}
-   {:set ::f/type :dep [:what] :f #(:type (:what %))}
-   {:do :figtype-incapable :dep [::f/type]
-    :f  (fn [{type ::f/type :as m}] (not (figtype-capable? type m)))}
-   {:set ::v/pawncap :dep [::f/type]
-    :f   #(and (= (::f/type %) :pawn) (s/valid? ::v/pawncap %))}
-   {:do :cannot-en-passant :dep [::v/pawncap]
-    :f  (fn [{pawncap ::v/pawncap :as m}] (and pawncap (not (can-we-en-passant m))))}
-   {:set ::f/color :dep [:what] :f #(:color (:what %))}
-   {:set :to :dep [] :f to}
-   {:do ::v/addition-error :def [:to] :f #(= ::v/addition-error (:to %))}
-   {:set :tosq :dep [:to] :f #(get-bef-sq % (:to %))}
-   {:set :tosq-color :dep [:tosq] :f #(when-let [tosq (:tosq %)] (:color tosq))}
-   {:do :capturing-own-piece :dep [::f/color :to :tosq :tosq-color] :f #(= (::f/color %) (::tosq-color %))}
-   {:set :more-than-one-abs :dep [::f/type] :f #(mult-cont? (::f/type %) %)}
-   {:do :not-all-empties :dep [] :f #(not (b/check-empties (-> % :before :board)
-                                                           (v/empties-cont-vec % (:from %))))}
-   {:set :castling-valid :dep [] :f (partial s/valid? ::v/castling)}
-   {:do :no-castling-possibility :dep [:castling-valid] :f #(and (:castling-valid %)
-                                                                 (not ((-> % :before :castling)
-                                                                       {:type  (:castling %)
-                                                                        :color (-> % :before :moves-next)})))}
-   {:do :not-all-empties :dep [:castling-valid]
-    :f  #(and (:castling-valid %)
-              (not (b/check-empties (-> % :before :board)
-                                    (->> (-> % :before :castling)
-                                         v/castling-empties
-                                         (map (partial + (* 8 (c/segm (-> % :before :moves-next)))))
-                                         (map (fn [x] [0 x]))))))}
-   {:set :moats-vec :dep [:to]
-    :f   #(cond (v/is-filevec? %) (set (v/moats-file-vec (:from %) (abs %) (:plusfile %)))
-                (v/is-diagvec? %) (set (filter identity [(v/moat-diag-vec (:from %) (:to %) (:plusfile %))]))
-                (v/is-knights? %) (set (filter identity [(v/moat-knight-vec (:from %) (:to %))]))
-                :else             #{})}
-   {:do :capturing-thru-moats :dep [:tosq :moats-vec] :f #(and (not (nil? (:tosq %))) (not (empty? (:moats-vec %))))}
-   {:do :passing-unbridged-moats :dep [:moats-vec] :f #(when-let [unbridged (not-empty (-> % :before :moats))]
-                                                         (some unbridged (:moats-vec %)))}
-   {:set ::v/pawncont :dep [::v/pawncap] :f #(or (::v/pawncap %) (and (= ((::f/type %) :pawn)
-                                                                         (s/valid? ::v/pawncont %))))}
-   {:do :wrong-pawn-direction :dep [::v/pawncont :what] :f #(and (::v/pawncont %)
-                                                                 (= (:inward %) (:crossed-center (:what %))))}
-   {:do :no-promotion :dep [::v/pawncont :to] :f #(and (::v/pawncont %) (= (p/rank (:to %)))
-                                                       (not (f/promfigtypes (:prom %))))}
-   {:do :not-your-move :dep [::f/color] :f #(not= (-> % :before :moves-next) (::f/color %))}])
-(defn impos-chain [impos-pred the-chain]
-  #(loop [cur % cha the-chain]
-     (if (empty? cha) (if (impos-pred cur) (:impossibility cur) cur)
-         (let [tha (first cha)
-                      thkind (cond (contains? tha :set) :set
-                                   (contains? tha :do) :do)
-                      thres (thkind tha)
-                      thfun (:f tha)]
-                  (case thkind
-                    :set (recur (assoc cur thres (thfun cur)) (rest cha))
-                    :do (if (thfun cur) (assoc cur :impossibility thres) (recur cur (rest cha))))))))
+  [[:nothing-to-move-here nothing-to-move-here?]
+   [:figtype-incapable is-move-figtype-incapable?]
+   [:cannot-en-passant cannot-we-en-passant?]
+   [::v/addition-error is-there-an-addition-error?]
+   [:capturing-own-piece is-move-capturing-own-piece?]
+   [:not-all-empties not-all-empties?]
+   [:no-castling-possibility is-there-no-castling-possibility?]
+   [:not-all-empties not-all-empties?]
+   [:capturing-thru-moats is-move-capturing-thru-moats?]
+   [:passing-unbridged-moats is-move-passing-unbridged-moats?]
+   [:wrong-pawn-direction has-move-a-wrong-pawn-direction?]
+   [:no-promotion has-move-a-lack-of-needed-promotion?]
+   [:not-your-move has-move-the-wrong-color-moving?]])
+(defn impos-chain [the-chain]
+  #(loop [cha the-chain]
+     (if (empty? cha) nil
+         (let [[key fun] (first the-chain)]
+           (if (fun %) key
+               (recur (rest cha)))))))
+(s/fdef impos-chain
+        :args (s/coll-of (s/tuple keyword? (s/fspec :args ::vecmove
+                                                    :ret boolean?))
+                         :kind vector? :distinct true :into []))
 (def initial-impossibilities-check
   "checks all initially-checked, ending with :no-promotion and :not-your-move"
-  (impos-chain (comp keyword? :impossibility) initial-impossibilities-chain))
+  (impos-chain initial-impossibilities-chain))
 
 (defn board-after-pawn-cap ;;:- b/Board
   [bef ;;:- b/Board,
