@@ -33,36 +33,39 @@
 
 (defn to [move] ;; :- Move]
   (cond (and (not (s/valid? ::v/any move))
-           (contains? move :to)) (:to move) (map? move) (v/bv-to move) :else (println "jkljkljkl" move)))
+             (contains? move :to)) (:to move)
+        (map? move) (v/bv-to move)
+        :else (println "Is not even a map -- to fn:" move)))
 (def m-to to) ;;alias
 (s/fdef to :args (s/cat :move ::move) :ret ::v/addvec-ret)
 
-(defn get-bef-sq [move ;; :- Move
-                                where]
-  (b/getb (:board (:before move)) where))
+(defn get-bef-sq [move where]
+  "Alias for getb with move:before:board as board"
+  (-> move :before :board (b/getb where)))
 (s/fdef get-bef-sq :args (s/cat :move ::move :where ::p/pos) :ret ::b/sq)
 
-(defn is-the-fig-we-cap-not-ours [m] ;; :- Move]
+(defn tosq [m] (get-bef-sq m (to m)))
+(defn tosq-color [m] (when-let [tosq (tosq m)] (:color tosq)))
+
+(defn is-the-fig-we-cap-not-ours [m]
+  "is before:movesnext not equal to color of fig on to square"
   (not= (:moves-next (:before m))
         (:color (get-bef-sq m (to m)))))
 (s/fdef is-the-fig-we-cap-not-ours :args (s/cat :m ::move) :ret boolean?)
 
+(defn what [m] (get-bef-sq m (:from m)))
+(defn whatype [m] (-> m what :type))
+(defn whacolor [m] (-> m what :color))
+(defn enp-sq [m] (get-bef-sq m (assoc (to m) 0 3)))
+(defn enp-sq-type [m] (-> m enp-sq :type))
+(defn enp-sq-color [m] (-> m enp-sq :color))
 (defn can-we-en-passant [m]
-  (let [to-sq (get-bef-sq m (to m))
-        from-sq (get-bef-sq m (:from m))
-        enp-sq (get-bef-sq m (assoc (to m) 0 3))]
     (and ;;(nil? to-sq) not really, imagine a gray queen teleported there
          ;;             next to jumped white pawn and black pawn ready to cap
-     (= :pawn (:type enp-sq) (:type from-sq))
+     (= :pawn (enp-sq-type m) (whatype m))
      (st/matching-ep (:en-passant (:before m)) (to m)
-                     (:color from-sq);(:moves-next (:before m)) this is handled by :not-your-move
-                     (:color enp-sq))))) ;(st/match-ep (:en-passant (:before m)) (to m))]
-                       ;(case match
-                       ;  :last (= (c/prev-col (:moves-next (:before m)))
-                       ;           (:color (get-bef-sq m (assoc (to m) 0 3))))
-                       ;  :prev (= (c/next-col (:moves-next (:before m)))
-                       ;           (:color (get-bef-sq m (assoc (to m) 0 3))))
-                       ;  false)
+                     (whacolor m);(:moves-next (:before m)) this is handled by :not-your-move
+                     (enp-sq-color m)))) ;(st/match-ep (:en-passant (:before m)) (to m))]
 (s/fdef can-we-en-passant :args (s/cat :m (s/and ::vecmove ::v/pawncap)) :ret boolean?)
 
 (def initially-checked-impossibilities #{:figtype-incapable
@@ -92,8 +95,6 @@
 (def Impossibility (apply sh/enum impossibilities))
 (s/def ::impossibility impossibilities)
 
-(defn what [m] (get-bef-sq m (:from m)))
-(defn whatype [m] (-> m what :type))
 (defn figtype-capable?
   ([type m]
    (case type
@@ -113,10 +114,7 @@
 (defn is-move-a-pawncap? [m] (and (= (whatype m) :pawn) (s/valid? ::v/pawncap m)))
 (defn cannot-we-en-passant? [m] (and (is-move-a-pawncap? m)
                                      (not (can-we-en-passant m))))
-(defn whacolor [m] (-> m what :color))
 (defn is-there-an-addition-error? [m] (= ::v/addition-error (to m)))
-(defn tosq [m] (get-bef-sq m (to m)))
-(defn tosq-color [m] (when-let [tosq (tosq m)] (:color tosq)))
 (defn is-move-capturing-own-piece? [m] (= (whacolor m) (tosq-color m)))
 (defn more-than-one-abs? [m] (mult-cont? (whatype m) m))
 (defn not-all-empties? [m] (not (b/check-empties (-> m :before :board)
