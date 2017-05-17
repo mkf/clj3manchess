@@ -3,6 +3,7 @@
             #?(:clj [clojure.spec :as sc]
                :cljs [cljs.spec :as sc])
             [clojure.set :as set]
+            [clojure.core.logic :as l]
             [clj3manchess.engine.pos :as p
              :refer [rank file color-segm pos-on-segm same-file same-rank
                      file-dist same-or-opposite-file opposite-file Pos Rank File kfm]]
