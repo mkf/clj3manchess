@@ -487,11 +487,11 @@
                       (eval-death sans-check))))))
 (sh/defn generate-vecs ; :- #{BoundVec}
   ([figtype :- f/FigType
-    {:keys [from prom] [rank-to :as to] :to :as ftp}] ;;:- (sh/either Desc DescMove)]
+    {:keys [from to prom] :as ftp}] ;;:- (sh/either Desc DescMove)]
    (->> ((v/vecft (v/tvec figtype)) from to)
         (#(cond (nil? %) #{} (or (= :pawnlongjump %) (map? %)) #{%} :else %))
         (map (if (and (= figtype :pawn)
-                      (= rank-to 5)
+                      (= (rank to) 5)
                       (not (nil? prom)))
                #(assoc % :prom prom) identity))
         (map #(assoc ftp :vec %))
