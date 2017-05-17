@@ -477,43 +477,42 @@
                                                          (new-king-pos-and-new-rook-pos moves-next (:castling m)))
                                                   moves-next alive))) :castling-over-check
                      :else new-state-after))))))
-(sh/defn after [m ;; :- VecMove
-]
+(defn after [m]
   (let [sans-check (after-sans-eval-death m)]
     (if-not (map? sans-check) sans-check
             (let [{:keys [board moves-next alive]} sans-check
                   we (c/prev-col moves-next)]
               (if-not (empty? (check-checking board we alive)) :we-in-check
                       (eval-death sans-check))))))
-(sh/defn generate-vecs ; :- #{BoundVec}
-  ([figtype :- f/FigType
-    {:keys [from to prom] :as ftp}] ;;:- (sh/either Desc DescMove)]
-   (->> ((v/vecft (v/tvec figtype)) from to)
-        (#(cond (nil? %) #{} (or (= :pawnlongjump %) (map? %)) #{%} :else %))
+(sh/defn generate-vecs
+  ([figtype {:keys [from to prom] :as ftp}]
+   (->> ((v/vecftset (v/tvec figtype)) from to)
         (map (if (and (= figtype :pawn)
                       (= (rank to) 5)
-                      (not (nil? prom)))
-               #(assoc % :prom prom) identity))
-        (map #(assoc ftp :vec %))
+                      (not (nil? prom))) #(assoc % :prom prom) identity))
+        ;;(map #(merge ftp %))
         set))
   ([{:keys [from before] :as ftp}] ;;:- DescMove]
    (if-let [ftb (get-bef-sq ftp from)]
      (-> ftb
          :type
          (generate-vecs ftp)
-         set)
+         ;; set
+         )
      :nothing-to-move-here)))
 
 (defn generate-afters-mapentries ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
   [{before :before :as ftp}] (let [vcs (generate-vecs ftp)]
                                (if (keyword? vcs) vcs
                                    (->> vcs
+                                        (map (partial merge ftp))
                                         (filter #(not (impossibilities %)))
                                         (map (fn [x] [x (after x)]))))))
 (defn generate-afters-seq
   [{before :before :as ftp}] (let [vcs (generate-vecs ftp)]
                                (if (keyword? vcs) vcs
                                    (->> vcs
+                                        (map (partial merge ftp))
                                         (filter #(not (impossibilities %)))
                                         (map after)))))
 (defn generate-afters-set [ftp] (let [afcs (generate-afters-seq ftp)]

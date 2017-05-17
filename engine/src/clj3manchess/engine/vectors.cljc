@@ -519,7 +519,7 @@
   ([t f] (wrappedfilevec t f false)))
 
 (defn castling-vecft [f t]
-  (cond (and (= (rank f) 0 (rank t))
+  (when (and (= (rank f) 0 (rank t))
              (= (mod (file f) 8) kfm))
         (case (mod (file t) 8)
           2 {:castling :queenside}
@@ -623,21 +623,33 @@
 (defn cont-vecft [from to]
   (set/union (axis-vecft from to)
              (set (diag-vecft from to))))
+(defn make-vecftset-from-vecft-oneret [oneret] #(set/select (complement nil?) #{(oneret %1 %2)}))
+(def castling-vecftset (make-vecftset-from-vecft-oneret castling-vecft))
+(def pawnwalk-vecftset (make-vecftset-from-vecft-oneret pawnwalk-vecft))
+(def pawnlongjump-vecftset (make-vecftset-from-vecft-oneret pawnlongjump-vecft))
+(def pawncap-vecftset (make-vecftset-from-vecft-oneret pawncap-vecft))
+(def pawn-vecftset (make-vecftset-from-vecft-oneret pawn-vecft))
+(def rank-vecftset (make-vecftset-from-vecft-oneret rank-vecft))
+(defn file-vecftset [from to] (set (file-vecft from to)))
+(def knight-vecftset (make-vecftset-from-vecft-oneret knight-vecft))
+(def kingcont-vecftset (make-vecftset-from-vecft-oneret kingcont-vecft))
+(def king-vecftset (make-vecftset-from-vecft-oneret king-vecft))
+(defn diag-vecftset [from to] (set (diag-vecft from to)))
 
 (def vecftset {
                ::axisvec axis-vecft
-               ::castlingvec #(set/select (complement nil?) (castling-vecft %1 %2))
+               ::castlingvec castling-vecftset
                ::contvec cont-vecft
-               ::pawnwalkvec #(set/select (complement nil?) (pawnwalk-vecft %1 %2))
-               ::pawnlongjumpvec #(set/select (complement nil?) (pawnlongjump-vecft %1 %2))
-               ::pawncapvec #(set/select (complement nil?) (pawncap-vecft %1 %2))
-               ::pawnvec #(set/select (complement nil?) (pawn-vecft %1 %2))
-               ::rankvec #(set/select (complement nil?) (rank-vecft %1 %2))
-               ::filevec (comp set file-vecft)
-               ::knightvec #(set/select (complement nil?) (knight-vecft %1 %2))
-               ::kingcontvec #(set/select (complement nil?) (kingcont-vecft %1 %2))
-               ::kingvec #(set/select (complement nil?) (king-vecft %1 %2))
-               ::diagvec (comp set diag-vecft)
+               ::pawnwalkvec pawnwalk-vecftset
+               ::pawnlongjumpvec pawnlongjump-vecftset
+               ::pawncapvec pawncap-vecftset
+               ::pawnvec pawn-vecftset
+               ::rankvec rank-vecftset
+               ::filevec file-vecftset
+               ::knightvec knight-vecftset
+               ::kingcontvec kingcont-vecftset
+               ::kingvec king-vecftset
+               ::diagvec diag-vecftset
                })
 
 (def vecft {::axisvec         axis-vecft
