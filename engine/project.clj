@@ -2,6 +2,7 @@
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/clojurescript "1.9.494"]
                  [prismatic/schema "1.1.5"]
+                 [org.clojure/core.logic "0.8.11"]
                  [org.clojure/test.check "0.9.0"]]
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.9"]
