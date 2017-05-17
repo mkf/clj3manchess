@@ -3,7 +3,7 @@
             #?(:clj [clojure.spec :as sc]
                :cljs [cljs.spec :as sc])
             [clojure.set :as set]
-            [clojure.core.logic :as l]
+            [clojure.core.logic :as l :refer [defne run*]]
             [clj3manchess.engine.pos :as p
              :refer [rank file color-segm pos-on-segm same-file same-rank
                      file-dist same-or-opposite-file opposite-file Pos Rank File kfm]]
@@ -299,18 +299,12 @@
 
 (s/defn add-knight-vec :- Pos [vec :- KnightVec, from :- Pos]
   (let [{:keys [inward plusfile centeronecloser]} vec
-        from-rank (rank from)
-        from-file (file from)
         more-rank (= centeronecloser inward)
-        absrank (?2:1 more-rank)
         more-file (not more-rank)
-        absfile (?2:1 more-file)
-        rank-mov ((sgnf inward) absrank)
-        file-mov ((sgnf plusfile) absfile)
-        rank-to (+ from-rank rank-mov)
+        rank-to (+ (rank from) ((sgnf inward) (?2:1 more-rank)))
         thru-pass (> rank-to 5)
         rank-to (if-not thru-pass rank-to (- 6 (- rank-to 5)))
-        file-to (+ from-file file-mov)
+        file-to (+ from-file ((sgnf plusfile) (?2:1 more-file)))
         file-to (if thru-pass (+ file-to 12) file-to)]
     [rank-to (mod file-to 24)]))
     ;; (cond (thru-center-knight-vec? inward centeronecloser from-rank)
