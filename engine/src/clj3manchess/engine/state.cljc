@@ -25,7 +25,7 @@
                 (s/optional-key :last) (s/maybe p/File)})
 (sc/def ::prev (sc/nilable ::p/file))
 (sc/def ::last (sc/nilable ::p/file))
-(sc/def ::en-passant (sc/keys :req-un [::prev ::last]))
+(sc/def ::en-passant (sc/keys :opt-un [::prev ::last]))
 (s/defn match-ep :- (s/maybe (s/enum :prev :last))
   [ep :- EnPassant, where :- p/Pos]
   (when (#{2 3} (rank where))

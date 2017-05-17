@@ -1,7 +1,11 @@
 (ns clj3manchess.engine.board-test
   (:require [clj3manchess.engine.board :as b]
             #?(:clj [clojure.test :as t]
-               :cljs [cljs.test :as t :include-macros true])))
+               :cljs [cljs.test :as t :include-macros true])
+            #?(:clj [clojure.spec.test :as stest]
+               :cljs [cljs.spec.test :as stest])))
+
+;;(stest/instrument `b/string-of-arrayboard)
 
 (defonce string-of-newgame-board
   "[[__ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __] 

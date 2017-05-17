@@ -409,7 +409,7 @@
                                                                                 (s/and ::v/any (v/bno :prom))
                                                                                 :kind set? :max-count 8
                                                                                 :distinct true :into #{})) :to ::to
-                                                          :vect (s/and ::v/any (v/bno :prom)))))
+                                                          :vect (s/and ::v/any (v/bno :prom)))) :ret boolean?)
 
 (sh/defn eval-death :- st/State [sta :- st/State]
   (let [;; noking (-> (partial contains? (b/where-are-kings (:board sta)))
@@ -484,22 +484,19 @@
                   we (c/prev-col moves-next)]
               (if-not (empty? (check-checking board we alive)) :we-in-check
                       (eval-death sans-check))))))
-(sh/defn generate-vecs
+(defn generate-vecs
   ([figtype {:keys [from to prom] :as ftp}]
    (->> ((v/vecftset (v/tvec figtype)) from to)
-        (map (if (and (= figtype :pawn)
-                      (= (rank to) 5)
-                      (not (nil? prom))) #(assoc % :prom prom) identity))
-        ;;(map #(merge ftp %))
+        (map #(cond-> % (and (= figtype :pawn) (= (rank to) 5) (not (nil? prom))) (assoc :prom prom)))
         set))
-  ([{:keys [from before] :as ftp}] ;;:- DescMove]
+  ([{:keys [from before] :as ftp}]
    (if-let [ftb (get-bef-sq ftp from)]
-     (-> ftb
-         :type
-         (generate-vecs ftp)
-         ;; set
-         )
+     (-> ftb :type (generate-vecs ftp))
      :nothing-to-move-here)))
+(s/fdef generate-vecs
+        :args (s/or :figtype-and-desc (s/cat :figtype ::f/type :ftp ::desc)
+                    :descmove ::descmove)
+        :ret (s/coll-of ::v/any :kind set?))
 
 (defn generate-afters-mapentries ; :- {BoundVec st/State} te BoundVecs to takie z generate-vecs
   [{before :before :as ftp}] (let [vcs (generate-vecs ftp)]

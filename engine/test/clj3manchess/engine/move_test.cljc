@@ -36,8 +36,8 @@ XXXXXXXXXXXXXXXXXXXX_XXX"))
 (t/deftest can-i-move-wo-check-newgame []
   (t/is (sut/can-i-move-wo-check st/newgame :white))
   (t/is (sut/can-i-move-wo-check st/newgame :white [1 0]))
-  (t/is (sut/can-i-move-wo-check st/newgame :white [1 0] {:inward true} [2 0]))
-  (t/is (sut/can-i-move-wo-check st/newgame :white [1 0] {:inward true} [2 0] {:inward true}))
+  (t/is (sut/can-i-move-wo-check st/newgame :white [1 0] #(#{{:inward (do %1 %2 true)}}) [2 0]))
+  (t/is (sut/can-i-move-wo-check st/newgame :white [1 0] #(#{{:inward (do %1 %2 true)}}) [2 0] {:inward true}))
   (println (sut/after-sans-eval-death-and-check {:inward true :before st/newgame :from [1 0]}))
   )
 
